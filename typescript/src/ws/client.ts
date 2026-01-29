@@ -83,7 +83,7 @@ export interface SubscribeOptions {
   channels: string[];
   /** Pool address filters (optional) */
   pools?: string[];
-  /** Protocol filters (optional): 'Raydium AMM', 'Orca Whirlpool', etc. */
+  /** Protocol filters (optional): 'RaydiumAmm', 'Whirlpool', 'MeteoraDlmm', etc. */
   protocols?: string[];
   /** Token pair filters (optional): [['mint1', 'mint2'], ...] */
   tokenPairs?: string[][];
