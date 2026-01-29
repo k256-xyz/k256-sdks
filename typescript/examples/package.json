@@ -1,0 +1,19 @@
+{
+  "name": "k256-sdk-examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Examples for @k256/sdk",
+  "type": "module",
+  "scripts": {
+    "ws": "tsx websocket.ts",
+    "pools": "tsx pools.ts",
+    "priority-fees": "tsx priority-fees.ts"
+  },
+  "dependencies": {
+    "@k256/sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.0"
+  }
+}

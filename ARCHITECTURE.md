@@ -20,7 +20,7 @@ This document defines the cross-language conventions for all K256 SDKs. **All SD
 | Language | Package/Module Name | Import Statement |
 |----------|---------------------|------------------|
 | TypeScript | `@k256/sdk` | `import { ... } from '@k256/sdk'` |
-| Go | `github.com/quiknode-labs/k256-sdk-go` | `import k256 "github.com/quiknode-labs/k256-sdk-go"` |
+| Go | `github.com/k256-xyz/sdk-go` | `import k256 "github.com/k256-xyz/sdk-go"` |
 | Python | `k256-sdk` (PyPI) | `from k256 import ...` |
 | Rust | `k256-sdk` (crates.io) | `use k256_sdk::...` |
 
@@ -346,11 +346,11 @@ Jitter: 0-500ms random
 
 ## Development Status
 
-| SDK | Status | Notes |
-|-----|--------|-------|
-| TypeScript | **In Development** | Located at `k256-app-dashboard/lib/k256-sdk/` |
-| Go | Planned | Stub at `k256-sdks/go/` |
-| Python | Planned | Stub at `k256-sdks/python/` |
-| Rust | Planned | Stub at `k256-sdks/rust/` |
+| SDK | Status | Package |
+|-----|--------|---------|
+| TypeScript | **Published** | [`@k256/sdk`](https://npmjs.com/package/@k256/sdk) |
+| Go | Planned | `github.com/k256-xyz/sdk-go` |
+| Python | Planned | `k256-sdk` (PyPI) |
+| Rust | Planned | `k256-sdk` (crates.io) |
 
-When TypeScript SDK is ready for npm publish, it will be extracted to `k256-sdks/typescript/` and published as `@k256/sdk`.
+Source code is in `k256-sdks/{language}/` directories.

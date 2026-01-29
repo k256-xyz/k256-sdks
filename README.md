@@ -1,119 +1,114 @@
 # K256 SDKs
 
-Official SDKs for the K256 Solana swap aggregator.
+Official SDKs for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
 
 ## Available SDKs
 
-| Language | Package | Status | Location |
-|----------|---------|--------|----------|
-| TypeScript | `@k256/sdk` | **In Development** | `k256-app-dashboard/lib/k256-sdk/` (internal) |
-| Go | `github.com/quiknode-labs/k256-sdk-go` | Planned | `k256-sdks/go/` |
-| Python | `k256-sdk` | Planned | `k256-sdks/python/` |
-| Rust | `k256-sdk` | Planned | `k256-sdks/rust/` |
+| Language | Package | Status | Install |
+|----------|---------|--------|---------|
+| TypeScript | [`@k256/sdk`](https://npmjs.com/package/@k256/sdk) | **Published** | `npm install @k256/sdk` |
+| Go | `github.com/k256-xyz/sdk-go` | Planned | - |
+| Python | `k256-sdk` | Planned | - |
+| Rust | `k256-sdk` | Planned | - |
 
-## Architecture
+## Repository Structure
 
-All SDKs follow the same module structure and naming conventions documented in [ARCHITECTURE.md](./ARCHITECTURE.md).
-
-## Features
-
-Each SDK provides:
-
-- **WebSocket Client** (`ws/`) - Real-time pool updates, priority fees, blockhash, streaming quotes
-- **REST API Client** (`api/`) - Quote, swap instructions, token search
-- **Type Definitions** (`types/`) - Pool, Token, Quote, Order types
-- **Utilities** (`utils/`) - Base58 encoding, address validation
+```
+k256-sdks/
+├── typescript/          # TypeScript SDK (@k256/sdk)
+│   ├── src/             # Source code
+│   └── examples/        # Runnable examples
+├── go/                  # Go SDK (planned)
+├── python/              # Python SDK (planned)
+├── rust/                # Rust SDK (planned)
+└── ARCHITECTURE.md      # Cross-language conventions
+```
 
 ## Quick Start
 
 ### TypeScript
 
+```bash
+npm install @k256/sdk
+```
+
 ```typescript
-import { createWebSocket, decodeMessage } from '@k256/sdk/ws';
-import type { PoolUpdate } from '@k256/sdk/types';
+import { K256WebSocketClient } from '@k256/sdk';
 
-const ws = createWebSocket({
-  url: 'wss://gateway.k256.xyz/v1/ws',
+const client = new K256WebSocketClient({
   apiKey: 'your-api-key',
+  onPoolUpdate: (update) => {
+    console.log(`Pool: ${update.data.poolAddress}`);
+    console.log(`Protocol: ${update.data.protocol}`);
+    console.log(`Balances: ${update.data.tokenBalances.join(', ')}`);
+  },
+  onPriorityFees: (fees) => {
+    console.log(`Recommended fee: ${fees.data.recommended} microlamports`);
+    console.log(`Network state: ${fees.data.state}`);
+  },
+  onBlockhash: (bh) => {
+    console.log(`Blockhash: ${bh.data.blockhash}`);
+  },
+  onError: (error) => console.error(error.message),
 });
 
-ws.on('message', (data: ArrayBuffer) => {
-  const message = decodeMessage(data);
-  if (message.type === 'pool_update') {
-    const update = message.data as PoolUpdate;
-    console.log(`Pool ${update.poolAddress} updated`);
-  }
+await client.connect();
+
+// Subscribe to real-time data
+client.subscribe({
+  channels: ['pools', 'priority_fees', 'blockhash'],
+  // Optional filters:
+  // protocols: ['Raydium AMM', 'Orca Whirlpool'],
+  // pools: ['PoolAddress1', 'PoolAddress2'],
 });
-
-ws.subscribe({ channels: ['pools'] });
 ```
 
-### Go (Coming Soon)
+### Running Examples
 
-```go
-import k256 "github.com/quiknode-labs/k256-sdk-go"
+Each SDK has an `examples/` folder with runnable examples:
 
-ws := k256.NewWebSocket(k256.Config{
-    URL:    "wss://gateway.k256.xyz/v1/ws",
-    APIKey: "your-api-key",
-})
-
-ws.OnMessage(func(data []byte) {
-    msg := k256.DecodeMessage(data)
-    if msg.Type == k256.MessageTypePoolUpdate {
-        update := msg.Data.(*k256.PoolUpdate)
-        fmt.Printf("Pool %s updated\n", update.PoolAddress)
-    }
-})
-
-ws.Subscribe(k256.SubscribeRequest{Channels: []string{"pools"}})
+```bash
+# TypeScript
+cd typescript/examples
+npm install
+K256_API_KEY=your-key npx tsx websocket.ts
 ```
 
-### Python (Coming Soon)
+## Features
 
-```python
-from k256.ws import create_websocket, decode_message
-from k256.types import PoolUpdate
+All SDKs provide:
 
-ws = create_websocket(
-    url="wss://gateway.k256.xyz/v1/ws",
-    api_key="your-api-key"
-)
+| Module | Description |
+|--------|-------------|
+| `ws/` | WebSocket client - real-time pool updates, priority fees, blockhash, streaming quotes |
+| `types/` | Type definitions - Pool, Token, Quote, PriorityFees, etc. |
+| `utils/` | Utilities - Base58 encoding, address validation |
+| `api/` | REST API client (planned) - Quote, swap instructions, token search |
 
-@ws.on_message
-def handle_message(data: bytes):
-    message = decode_message(data)
-    if message.type == "pool_update":
-        update: PoolUpdate = message.data
-        print(f"Pool {update.pool_address} updated")
+## Channels
 
-ws.subscribe(channels=["pools"])
-```
+Subscribe to these real-time data channels:
 
-### Rust (Coming Soon)
+| Channel | Description | Update Frequency |
+|---------|-------------|------------------|
+| `pools` | DEX pool state changes (balances, prices) | Real-time |
+| `priority_fees` | Solana priority fee estimates | ~400ms |
+| `blockhash` | Recent blockhash for transactions | ~400ms |
 
-```rust
-use k256_sdk::ws::{WebSocket, Config, decode_message};
-use k256_sdk::types::PoolUpdate;
+## Architecture
 
-let ws = WebSocket::new(Config {
-    url: "wss://gateway.k256.xyz/v1/ws",
-    api_key: "your-api-key",
-});
+All SDKs follow the same patterns documented in [ARCHITECTURE.md](./ARCHITECTURE.md):
 
-ws.on_message(|data| {
-    let msg = decode_message(&data);
-    if let Message::PoolUpdate(update) = msg {
-        println!("Pool {} updated", update.pool_address);
-    }
-});
+- Consistent module structure across languages
+- Same type names (language casing conventions apply)
+- Identical binary protocol decoding
+- Same message type constants
 
-ws.subscribe(&SubscribeRequest { channels: vec!["pools"] });
-```
+## Links
 
-## Contributing
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for coding conventions and patterns that must be followed across all SDKs.
+- [K256 Website](https://k256.xyz)
+- [API Documentation](https://docs.k256.xyz)
+- [GitHub](https://github.com/k256-xyz)
 
 ## License
 

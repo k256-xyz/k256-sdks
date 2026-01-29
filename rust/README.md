@@ -1,61 +1,70 @@
 # K256 Rust SDK
 
-Official Rust SDK for the K256 Solana swap aggregator.
+Official Rust SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
 
 **Status:** Planned
 
-## Installation (Future)
+## Installation (Coming Soon)
 
 ```toml
-# Cargo.toml
 [dependencies]
 k256-sdk = "0.1"
 ```
 
-## Usage (Future)
+## Quick Start
 
 ```rust
-use k256_sdk::ws::{WebSocket, Config, decode_message, Message};
-use k256_sdk::types::{PoolUpdate, PriorityFees};
+use k256_sdk::{K256WebSocketClient, Config};
+use k256_sdk::ws::{PoolUpdate, PriorityFees};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create WebSocket client
-    let ws = WebSocket::new(Config {
-        url: "wss://gateway.k256.xyz/v1/ws".to_string(),
-        api_key: "your-api-key".to_string(),
+    let client = K256WebSocketClient::new(Config {
+        api_key: std::env::var("K256_API_KEY")?,
+        ..Default::default()
+    });
+
+    // Handle pool updates
+    client.on_pool_update(|update: PoolUpdate| {
+        println!("Pool {}: slot={}", update.pool_address, update.slot);
+        println!("  Balances: {:?}", update.token_balances);
+    });
+
+    // Handle priority fees
+    client.on_priority_fees(|fees: PriorityFees| {
+        println!("Recommended fee: {} microlamports", fees.recommended);
+        println!("Network state: {:?}", fees.state);
+    });
+
+    // Handle errors
+    client.on_error(|err| {
+        eprintln!("Error: {}", err);
+    });
+
+    // Connect and subscribe
+    client.connect().await?;
+    
+    client.subscribe(SubscribeRequest {
+        channels: vec!["pools", "priority_fees", "blockhash"],
+        // Optional filters:
+        // protocols: Some(vec!["Raydium AMM", "Orca Whirlpool"]),
         ..Default::default()
     }).await?;
 
-    // Subscribe to channels
-    ws.subscribe(&SubscribeRequest {
-        channels: vec!["pools".to_string(), "priority_fees".to_string()],
-        protocols: Some(vec!["Raydium CLMM".to_string()]),
-        ..Default::default()
-    }).await?;
-
-    // Handle messages
-    while let Some(data) = ws.recv().await {
-        match decode_message(&data)? {
-            Message::PoolUpdate(update) => {
-                println!(
-                    "Pool {} updated: slot={}",
-                    bs58::encode(&update.pool_address).into_string(),
-                    update.slot
-                );
-            }
-            Message::PriorityFees(fees) => {
-                println!("Priority fees: {} microlamports", fees.recommended);
-            }
-            Message::Heartbeat(hb) => {
-                println!("Heartbeat: {} messages sent", hb.messages_sent);
-            }
-            _ => {}
-        }
-    }
-
+    // Keep running
+    tokio::signal::ctrl_c().await?;
     Ok(())
 }
+```
+
+## Examples
+
+See the `examples/` directory for runnable examples:
+
+```bash
+cd examples
+K256_API_KEY=your-key cargo run --example websocket
 ```
 
 ## Module Structure
@@ -66,47 +75,23 @@ k256-sdk/
 │   ├── lib.rs
 │   ├── ws/
 │   │   ├── mod.rs
-│   │   ├── client.rs       # WebSocket connection
-│   │   ├── decoder.rs      # Binary message decoder
-│   │   └── types.rs        # WS types
-│   ├── api/
-│   │   ├── mod.rs
-│   │   ├── client.rs       # HTTP client
-│   │   ├── quote.rs        # Quote endpoint
-│   │   └── swap.rs         # Swap endpoint
+│   │   ├── client.rs     # WebSocket connection
+│   │   ├── decoder.rs    # Binary message decoder
+│   │   └── types.rs      # WS types
 │   ├── types/
 │   │   ├── mod.rs
-│   │   ├── pool.rs         # Pool, PoolUpdate
-│   │   ├── token.rs        # Token
-│   │   └── quote.rs        # Quote
+│   │   ├── pool.rs       # Pool, PoolUpdate
+│   │   └── quote.rs      # Quote
 │   └── utils/
 │       ├── mod.rs
-│       └── base58.rs       # Base58 (re-export bs58)
-├── tests/
-├── Cargo.toml
-└── README.md
-```
-
-## Features
-
-```toml
-# Cargo.toml
-[features]
-default = ["ws", "api"]
-ws = ["tokio-tungstenite", "futures-util"]
-api = ["reqwest"]
+│       └── base58.rs     # Base58 encoding
+└── examples/
+    └── websocket.rs      # WebSocket example
 ```
 
 ## Architecture
 
-This SDK follows the cross-language conventions defined in [../ARCHITECTURE.md](../ARCHITECTURE.md).
-
-## Contributing
-
-1. Read [ARCHITECTURE.md](../ARCHITECTURE.md) for naming conventions
-2. Use Rust 2021 edition
-3. Format with `cargo fmt` and lint with `cargo clippy`
-4. Write tests and documentation
+This SDK follows the cross-language conventions defined in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## License
 

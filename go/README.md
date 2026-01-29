@@ -1,89 +1,96 @@
 # K256 Go SDK
 
-Official Go SDK for the K256 Solana swap aggregator.
+Official Go SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
 
 **Status:** Planned
 
-## Installation (Future)
+## Installation (Coming Soon)
 
 ```bash
-go get github.com/quiknode-labs/k256-sdk-go
+go get github.com/k256-xyz/sdk-go
 ```
 
-## Usage (Future)
+## Quick Start
 
 ```go
 package main
 
 import (
     "fmt"
-    k256 "github.com/quiknode-labs/k256-sdk-go"
+    k256 "github.com/k256-xyz/sdk-go"
 )
 
 func main() {
     // Create WebSocket client
-    ws := k256.NewWebSocket(k256.WebSocketConfig{
-        URL:    "wss://gateway.k256.xyz/v1/ws",
+    ws := k256.NewWebSocket(k256.Config{
         APIKey: "your-api-key",
     })
     defer ws.Close()
 
-    // Handle messages
-    ws.OnMessage(func(data []byte) {
-        msg := k256.DecodeMessage(data)
-        switch msg.Type {
-        case k256.MessageTypePoolUpdate:
-            update := msg.Data.(*k256.PoolUpdate)
-            fmt.Printf("Pool %s updated: slot=%d\n", 
-                k256.Base58Encode(update.PoolAddress[:]), 
-                update.Slot)
-        case k256.MessageTypePriorityFees:
-            fees := msg.Data.(*k256.PriorityFees)
-            fmt.Printf("Priority fees: %d microlamports\n", fees.Recommended)
-        }
+    // Handle pool updates
+    ws.OnPoolUpdate(func(update *k256.PoolUpdate) {
+        fmt.Printf("Pool %s: slot=%d, balances=%v\n",
+            update.PoolAddress,
+            update.Slot,
+            update.TokenBalances)
     })
 
-    // Subscribe to channels
+    // Handle priority fees
+    ws.OnPriorityFees(func(fees *k256.PriorityFees) {
+        fmt.Printf("Recommended fee: %d microlamports\n", fees.Recommended)
+    })
+
+    // Handle errors
+    ws.OnError(func(err error) {
+        fmt.Printf("Error: %v\n", err)
+    })
+
+    // Connect and subscribe
+    if err := ws.Connect(); err != nil {
+        panic(err)
+    }
+
     ws.Subscribe(k256.SubscribeRequest{
-        Channels:  []string{"pools", "priority_fees"},
-        Protocols: []string{"Raydium CLMM"},
+        Channels: []string{"pools", "priority_fees", "blockhash"},
+        // Optional filters:
+        // Protocols: []string{"Raydium AMM", "Orca Whirlpool"},
     })
 
-    // Block forever (or use select{} in real code)
+    // Block forever
     select {}
 }
+```
+
+## Examples
+
+See the `examples/` directory for runnable examples:
+
+```bash
+cd examples
+K256_API_KEY=your-key go run websocket.go
 ```
 
 ## Module Structure
 
 ```
-k256-sdk-go/
+sdk-go/
 ├── ws/
 │   ├── client.go       # WebSocket connection
 │   ├── decoder.go      # Binary message decoder
 │   └── types.go        # WS types
-├── api/
-│   ├── client.go       # HTTP client
-│   ├── quote.go        # Quote endpoint
-│   └── swap.go         # Swap endpoint
 ├── types/
 │   ├── pool.go         # Pool, PoolUpdate
 │   ├── token.go        # Token
 │   └── quote.go        # Quote
-└── utils/
-    └── base58.go       # Base58 encoding
+├── utils/
+│   └── base58.go       # Base58 encoding
+└── examples/
+    └── websocket.go    # WebSocket example
 ```
 
 ## Architecture
 
-This SDK follows the cross-language conventions defined in [../ARCHITECTURE.md](../ARCHITECTURE.md).
-
-## Contributing
-
-1. Read [ARCHITECTURE.md](../ARCHITECTURE.md) for naming conventions
-2. Follow standard Go project layout
-3. Use `go fmt` and `go vet`
-4. Write tests for all public functions
+This SDK follows the cross-language conventions defined in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## License
 

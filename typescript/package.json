@@ -1,16 +1,17 @@
 {
   "name": "@k256/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official TypeScript SDK for K256 - Solana swap aggregator",
   "author": "K256 <support@k256.xyz>",
   "license": "MIT",
   "homepage": "https://k256.xyz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/k256-xyz/sdk-typescript"
+    "url": "https://github.com/k256-xyz/k256-sdks",
+    "directory": "typescript"
   },
   "bugs": {
-    "url": "https://github.com/k256-xyz/sdk-typescript/issues"
+    "url": "https://github.com/k256-xyz/k256-sdks/issues"
   },
   "keywords": [
     "solana",
