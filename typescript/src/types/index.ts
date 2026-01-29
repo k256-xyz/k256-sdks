@@ -20,8 +20,6 @@ export interface Pool {
   tokenBalances: string[];
   /** Token decimals */
   tokenDecimals: number[];
-  /** Whether pool is valid for trading */
-  isValid: boolean;
 }
 
 /**

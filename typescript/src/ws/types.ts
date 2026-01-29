@@ -60,7 +60,6 @@ export interface PoolUpdateMessage {
     tokenMints: string[];
     tokenBalances: string[];
     tokenDecimals: number[];
-    isValid: boolean;
     bestBid?: { price: string; size: string };
     bestAsk?: { price: string; size: string };
   };

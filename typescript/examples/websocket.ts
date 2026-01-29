@@ -119,7 +119,6 @@ const client = new K256WebSocketClient({
       console.log(`   Protocol: ${data.protocol}`);
       console.log(`   Slot: ${data.slot}`);
       console.log(`   Balances: [${data.tokenBalances.map(b => BigInt(b).toLocaleString()).join(', ')}]`);
-      console.log(`   Valid: ${data.isValid}`);
     }
   },
   

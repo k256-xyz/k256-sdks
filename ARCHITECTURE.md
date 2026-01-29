@@ -215,7 +215,6 @@ pool_address            [u8; 32]          Pool pubkey
 all_token_mints         Vec<[u8; 32]>     Token mints (u64 len + n*32)
 all_token_balances      Vec<u64>          Token balances (u64 len + n*8)
 all_token_decimals      Vec<i32>          Token decimals (u64 len + n*4)
-is_valid                bool              Pool validity flag
 best_bid                Option<OrderLevel> Best bid (0=None, 1+data=Some)
 best_ask                Option<OrderLevel> Best ask (0=None, 1+data=Some)
 ```

@@ -324,10 +324,6 @@ function decodePoolUpdate(payload: ArrayBuffer, payloadView: DataView): PoolUpda
       offset += 4;
     }
 
-    // is_valid (bool)
-    const isValid = offset < payload.byteLength ? payloadView.getUint8(offset) !== 0 : true;
-    offset += 1;
-
     // best_bid and best_ask (Option<OrderLevel>) - skip for now
     // They use bincode Option encoding: 0 = None, 1 + data = Some
 
@@ -342,7 +338,6 @@ function decodePoolUpdate(payload: ArrayBuffer, payloadView: DataView): PoolUpda
         tokenMints,
         tokenBalances,
         tokenDecimals,
-        isValid,
       },
     };
   } catch {
@@ -357,7 +352,6 @@ function decodePoolUpdate(payload: ArrayBuffer, payloadView: DataView): PoolUpda
         tokenMints: [],
         tokenBalances: [],
         tokenDecimals: [],
-        isValid: false,
       },
     };
   }
