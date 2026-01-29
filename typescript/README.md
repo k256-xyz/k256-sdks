@@ -87,19 +87,22 @@ type ConnectionState =
 ## Error Handling
 
 ```typescript
-import { K256WebSocketError } from '@k256/sdk';
+import { K256WebSocketClient, K256WebSocketError } from '@k256/sdk';
 
-client.onError = (error: K256WebSocketError) => {
-  console.error(`[${error.code}] ${error.message}`);
-  
-  if (error.isAuthError) {
-    // Invalid API key - don't retry
-  }
-  
-  if (error.isRecoverable) {
-    // Will auto-reconnect
-  }
-};
+const client = new K256WebSocketClient({
+  apiKey: 'your-api-key',
+  onError: (error: K256WebSocketError) => {
+    console.error(`[${error.code}] ${error.message}`);
+    
+    if (error.isAuthError) {
+      // Invalid API key - don't retry
+    }
+    
+    if (error.isRecoverable) {
+      // Will auto-reconnect
+    }
+  },
+});
 ```
 
 ## Low-Level Decoder
@@ -148,11 +151,32 @@ interface K256WebSocketClientConfig {
 }
 ```
 
+## Examples
+
+Runnable examples are available in the GitHub repository:
+
+```bash
+git clone https://github.com/k256-xyz/k256-sdks.git
+cd k256-sdks/typescript/examples
+npm install
+
+# Run with your API key
+K256_API_KEY=your-key npx tsx websocket.ts
+
+# Subscribe to specific channel
+K256_API_KEY=your-key npx tsx websocket.ts --channel=priority_fees
+
+# Filter by protocol
+K256_API_KEY=your-key npx tsx websocket.ts --protocol="Raydium AMM"
+```
+
+See [examples/](https://github.com/k256-xyz/k256-sdks/tree/main/typescript/examples) for all available examples.
+
 ## Links
 
 - [K256 Website](https://k256.xyz)
 - [API Documentation](https://docs.k256.xyz)
-- [GitHub](https://github.com/k256-xyz)
+- [GitHub](https://github.com/k256-xyz/k256-sdks)
 
 ## License
 

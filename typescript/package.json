@@ -1,6 +1,6 @@
 {
   "name": "@k256/sdk",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "description": "Official TypeScript SDK for K256 - Solana swap aggregator",
   "author": "K256 <support@k256.xyz>",
   "license": "MIT",
