@@ -1,6 +1,8 @@
 # @k256/sdk
 
-Official TypeScript SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
+Official TypeScript SDK for [K256](https://k256.xyz) - the gateway to decentralized finance.
+
+Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
 ## Installation
 
@@ -36,7 +38,6 @@ const client = new K256WebSocketClient({
 await client.connect();
 client.subscribe({
   channels: ['pools', 'priority_fees', 'blockhash'],
-  protocols: ['Raydium AMM', 'Orca Whirlpool'], // Optional filter
 });
 
 // Streaming quotes
@@ -160,14 +161,14 @@ git clone https://github.com/k256-xyz/k256-sdks.git
 cd k256-sdks/typescript/examples
 npm install
 
-# Run with your API key
+# Run with your API key (all channels)
 K256_API_KEY=your-key npx tsx websocket.ts
 
 # Subscribe to specific channel
 K256_API_KEY=your-key npx tsx websocket.ts --channel=priority_fees
 
-# Filter by protocol
-K256_API_KEY=your-key npx tsx websocket.ts --protocol="Raydium AMM"
+# Subscribe to blockhash only
+K256_API_KEY=your-key npx tsx websocket.ts --channel=blockhash
 ```
 
 See [examples/](https://github.com/k256-xyz/k256-sdks/tree/main/typescript/examples) for all available examples.

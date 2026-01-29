@@ -5,9 +5,7 @@
   "description": "Examples for @k256/sdk",
   "type": "module",
   "scripts": {
-    "ws": "tsx websocket.ts",
-    "pools": "tsx pools.ts",
-    "priority-fees": "tsx priority-fees.ts"
+    "example": "tsx websocket.ts"
   },
   "dependencies": {
     "@k256/sdk": "^0.1.0"

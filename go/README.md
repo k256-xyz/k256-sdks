@@ -1,6 +1,8 @@
 # K256 Go SDK
 
-Official Go SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
+Official Go SDK for [K256](https://k256.xyz) - the gateway to decentralized finance.
+
+Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
 **Status:** Planned
 
@@ -52,8 +54,6 @@ func main() {
 
     ws.Subscribe(k256.SubscribeRequest{
         Channels: []string{"pools", "priority_fees", "blockhash"},
-        // Optional filters:
-        // Protocols: []string{"Raydium AMM", "Orca Whirlpool"},
     })
 
     // Block forever

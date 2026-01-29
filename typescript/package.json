@@ -1,7 +1,7 @@
 {
   "name": "@k256/sdk",
-  "version": "0.1.3",
-  "description": "Official TypeScript SDK for K256 - Solana swap aggregator",
+  "version": "0.1.5",
+  "description": "Official TypeScript SDK for K256 - the gateway to Solana's liquidity ecosystem",
   "author": "K256 <support@k256.xyz>",
   "license": "MIT",
   "homepage": "https://k256.xyz",

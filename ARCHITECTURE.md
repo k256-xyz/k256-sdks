@@ -292,9 +292,9 @@ Header: X-API-Key: {API_KEY}
   "type": "subscribe",
   "channels": ["pools", "priority_fees", "blockhash"],
   "format": "json",  // Optional: "json" or omit for binary (default)
-  "protocols": ["Raydium CLMM", "Orca Whirlpool"],  // Optional filter
-  "pools": ["PoolAddress1", "PoolAddress2"],        // Optional filter
-  "token_pairs": [["MintA", "MintB"]]               // Optional filter
+  "protocols": ["RaydiumClmm", "Whirlpool"],       // Optional filter (requires DEX access)
+  "pools": ["PoolAddress1", "PoolAddress2"],       // Optional filter
+  "token_pairs": [["MintA", "MintB"]]              // Optional filter
 }
 ```
 

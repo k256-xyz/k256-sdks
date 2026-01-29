@@ -1,6 +1,8 @@
 # K256 SDKs
 
-Official SDKs for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
+Official SDKs for [K256](https://k256.xyz) - the gateway to decentralized finance.
+
+Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
 ## Available SDKs
 
@@ -57,9 +59,6 @@ await client.connect();
 // Subscribe to real-time data
 client.subscribe({
   channels: ['pools', 'priority_fees', 'blockhash'],
-  // Optional filters:
-  // protocols: ['Raydium AMM', 'Orca Whirlpool'],
-  // pools: ['PoolAddress1', 'PoolAddress2'],
 });
 ```
 

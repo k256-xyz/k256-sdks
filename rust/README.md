@@ -1,6 +1,8 @@
 # K256 Rust SDK
 
-Official Rust SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
+Official Rust SDK for [K256](https://k256.xyz) - the gateway to decentralized finance.
+
+Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
 **Status:** Planned
 
@@ -47,8 +49,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     client.subscribe(SubscribeRequest {
         channels: vec!["pools", "priority_fees", "blockhash"],
-        // Optional filters:
-        // protocols: Some(vec!["Raydium AMM", "Orca Whirlpool"]),
         ..Default::default()
     }).await?;
 

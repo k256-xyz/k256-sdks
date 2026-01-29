@@ -1,6 +1,8 @@
 # K256 Python SDK
 
-Official Python SDK for [K256](https://k256.xyz) - the fastest Solana swap aggregator.
+Official Python SDK for [K256](https://k256.xyz) - the gateway to decentralized finance.
+
+Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
 **Status:** Planned
 
@@ -42,8 +44,6 @@ async def main():
     
     client.subscribe(
         channels=["pools", "priority_fees", "blockhash"],
-        # Optional filters:
-        # protocols=["Raydium AMM", "Orca Whirlpool"],
     )
 
     # Keep running

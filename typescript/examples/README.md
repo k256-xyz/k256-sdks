@@ -37,18 +37,14 @@ K256_API_KEY=your-key npx tsx websocket.ts --channel=blockhash
 
 ### WebSocket - With Filters
 
-Filter by protocol or pool address:
+Filter by pool address:
 
 ```bash
-# Only Raydium AMM pools
-K256_API_KEY=your-key npx tsx websocket.ts --protocol="Raydium AMM"
-
-# Only Orca Whirlpool
-K256_API_KEY=your-key npx tsx websocket.ts --protocol="Orca Whirlpool"
-
 # Specific pool address
 K256_API_KEY=your-key npx tsx websocket.ts --pool=PoolAddressHere
 ```
+
+**Note:** Protocol filtering (`--protocol`) requires specific DEX access on your API key. Contact support for access.
 
 ## Available Channels
 

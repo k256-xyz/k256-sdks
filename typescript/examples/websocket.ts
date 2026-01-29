@@ -12,7 +12,7 @@
  *   K256_API_KEY=your-api-key npx tsx websocket.ts
  *   K256_API_KEY=your-api-key npx tsx websocket.ts --channel=pools
  *   K256_API_KEY=your-api-key npx tsx websocket.ts --channel=priority_fees
- *   K256_API_KEY=your-api-key npx tsx websocket.ts --protocol="Raydium AMM"
+ *   K256_API_KEY=your-api-key npx tsx websocket.ts --pool=PoolAddressHere
  */
 
 import { K256WebSocketClient } from '@k256/sdk';
