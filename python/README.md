@@ -4,9 +4,11 @@ Official Python SDK for [K256](https://k256.xyz) - the gateway to decentralized 
 
 Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
-**Status:** Planned
+[![PyPI version](https://badge.fury.io/py/k256-sdk.svg)](https://badge.fury.io/py/k256-sdk)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Installation (Coming Soon)
+## Installation
 
 ```bash
 pip install k256-sdk
@@ -65,23 +67,24 @@ K256_API_KEY=your-key python websocket.py
 ## Module Structure
 
 ```
-k256-sdk/
-├── k256/
+k256/
+├── __init__.py          # Main package exports
+├── ws/
 │   ├── __init__.py
-│   ├── ws/
-│   │   ├── __init__.py
-│   │   ├── client.py     # WebSocket connection
-│   │   ├── decoder.py    # Binary message decoder
-│   │   └── types.py      # WS types
-│   ├── types/
-│   │   ├── __init__.py
-│   │   ├── pool.py       # Pool, PoolUpdate
-│   │   └── quote.py      # Quote
-│   └── utils/
-│       ├── __init__.py
-│       └── base58.py     # Base58 encoding
-└── examples/
-    └── websocket.py      # WebSocket example
+│   ├── client.py        # WebSocket client
+│   └── decoder.py       # Binary message decoder
+├── types/
+│   ├── __init__.py
+│   ├── pool.py          # PoolUpdate
+│   ├── fees.py          # PriorityFees
+│   ├── blockhash.py     # Blockhash
+│   ├── quote.py         # Quote
+│   ├── token.py         # Token
+│   ├── heartbeat.py     # Heartbeat
+│   └── messages.py      # MessageType, NetworkState
+└── utils/
+    ├── __init__.py
+    └── base58.py        # Base58 encoding
 ```
 
 ## Architecture

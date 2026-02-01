@@ -4,12 +4,14 @@ Official Go SDK for [K256](https://k256.xyz) - the gateway to decentralized fina
 
 Connect any application to Solana's liquidity ecosystem. One API. All venues. Full observability.
 
-**Status:** Planned
+[![Go Reference](https://pkg.go.dev/badge/github.com/k256-xyz/k256-sdks/go.svg)](https://pkg.go.dev/github.com/k256-xyz/k256-sdks/go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/k256-xyz/k256-sdks/go)](https://goreportcard.com/report/github.com/k256-xyz/k256-sdks/go)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Installation (Coming Soon)
+## Installation
 
 ```bash
-go get github.com/k256-xyz/sdk-go
+go get github.com/k256-xyz/k256-sdks/go
 ```
 
 ## Quick Start
@@ -19,7 +21,7 @@ package main
 
 import (
     "fmt"
-    k256 "github.com/k256-xyz/sdk-go"
+    k256 "github.com/k256-xyz/k256-sdks/go"
 )
 
 func main() {
@@ -73,17 +75,12 @@ K256_API_KEY=your-key go run websocket.go
 ## Module Structure
 
 ```
-sdk-go/
-├── ws/
-│   ├── client.go       # WebSocket connection
-│   ├── decoder.go      # Binary message decoder
-│   └── types.go        # WS types
-├── types/
-│   ├── pool.go         # Pool, PoolUpdate
-│   ├── token.go        # Token
-│   └── quote.go        # Quote
-├── utils/
-│   └── base58.go       # Base58 encoding
+k256/                   # github.com/k256-xyz/k256-sdks/go
+├── k256.go             # Main package exports
+├── client.go           # WebSocket client
+├── decoder.go          # Binary message decoder
+├── types.go            # Type definitions (PoolUpdate, PriorityFees, etc.)
+├── utils.go            # Base58 encoding utilities
 └── examples/
     └── websocket.go    # WebSocket example
 ```

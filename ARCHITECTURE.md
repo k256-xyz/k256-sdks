@@ -23,6 +23,12 @@ This document defines the cross-language conventions for all K256 SDKs. **All SD
 | Go | `github.com/k256-xyz/sdk-go` | `import k256 "github.com/k256-xyz/sdk-go"` |
 | Python | `k256-sdk` (PyPI) | `from k256 import ...` |
 | Rust | `k256-sdk` (crates.io) | `use k256_sdk::...` |
+| Java | `xyz.k256:sdk` (Maven) | `import xyz.k256.sdk.*` |
+| C++ | `k256-sdk` (header-only) | `#include <k256/k256.hpp>` |
+| Ruby | `k256-sdk` (RubyGems) | `require 'k256'` |
+| PHP | `k256/sdk` (Packagist) | `use K256\...` |
+| Swift | `K256SDK` (SPM) | `import K256SDK` |
+| Julia | `K256` (General) | `using K256` |
 
 ---
 
@@ -59,16 +65,18 @@ Type names are **language-agnostic** (same concept, same name). Only casing foll
 
 ### Core Types
 
-| Concept | TypeScript | Go | Python | Rust |
-|---------|------------|-----|--------|------|
-| Pool state update | `PoolUpdate` | `PoolUpdate` | `PoolUpdate` | `PoolUpdate` |
-| Priority fees | `PriorityFees` | `PriorityFees` | `PriorityFees` | `PriorityFees` |
-| Recent blockhash | `Blockhash` | `Blockhash` | `Blockhash` | `Blockhash` |
-| Swap quote | `Quote` | `Quote` | `Quote` | `Quote` |
-| Token metadata | `Token` | `Token` | `Token` | `Token` |
-| DEX pool | `Pool` | `Pool` | `Pool` | `Pool` |
-| Order book level | `OrderLevel` | `OrderLevel` | `OrderLevel` | `OrderLevel` |
-| Heartbeat stats | `Heartbeat` | `Heartbeat` | `Heartbeat` | `Heartbeat` |
+All SDKs use identical type names (only casing follows language conventions):
+
+| Concept | Name | All Languages |
+|---------|------|---------------|
+| Pool state update | `PoolUpdate` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Priority fees | `PriorityFees` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Recent blockhash | `Blockhash` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Swap quote | `Quote` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Token metadata | `Token` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| DEX pool | `Pool` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Order book level | `OrderLevel` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Heartbeat stats | `Heartbeat` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
 
 ### DO NOT Use These Names
 
@@ -345,11 +353,96 @@ Jitter: 0-500ms random
 
 ## Development Status
 
-| SDK | Status | Package |
-|-----|--------|---------|
-| TypeScript | **Published** | [`@k256/sdk`](https://npmjs.com/package/@k256/sdk) |
-| Go | Planned | `github.com/k256-xyz/sdk-go` |
-| Python | Planned | `k256-sdk` (PyPI) |
-| Rust | Planned | `k256-sdk` (crates.io) |
+| SDK | Status | Package | Registry |
+|-----|--------|---------|----------|
+| TypeScript | **Published** | [`@k256/sdk`](https://npmjs.com/package/@k256/sdk) | npm |
+| Go | **Ready** | [`github.com/k256-xyz/sdk-go`](https://pkg.go.dev/github.com/k256-xyz/sdk-go) | go.dev |
+| Python | **Ready** | [`k256-sdk`](https://pypi.org/project/k256-sdk/) | PyPI |
+| Rust | **Ready** | [`k256-sdk`](https://crates.io/crates/k256-sdk) | crates.io |
+| Java | **Ready** | [`xyz.k256:sdk`](https://search.maven.org/artifact/xyz.k256/sdk) | Maven Central |
+| C++ | **Ready** | `k256-sdk` (header-only) | CMake/vcpkg |
+| Ruby | **Ready** | [`k256-sdk`](https://rubygems.org/gems/k256-sdk) | RubyGems |
+| PHP | **Ready** | [`k256/sdk`](https://packagist.org/packages/k256/sdk) | Packagist |
+| Swift | **Ready** | `K256SDK` | Swift Package Manager |
+| Julia | **Ready** | `K256` | Julia General Registry |
 
 Source code is in `k256-sdks/{language}/` directories.
+
+---
+
+## Publishing Guide
+
+### TypeScript (npm)
+```bash
+cd typescript
+npm run build
+npm publish --access public
+```
+
+### Python (PyPI)
+```bash
+cd python
+pip install build twine
+python -m build
+twine upload dist/*
+```
+
+### Rust (crates.io)
+```bash
+cd rust
+cargo login
+cargo publish
+```
+
+### Go (go.dev)
+```bash
+# Tag and push from the sdk-go repo
+git tag v0.1.0
+git push origin v0.1.0
+# Package auto-indexes at pkg.go.dev
+```
+
+### Java (Maven Central)
+```bash
+cd java
+mvn clean deploy -P release
+# Requires Sonatype credentials and GPG signing
+```
+
+### Ruby (RubyGems)
+```bash
+cd ruby
+gem build k256-sdk.gemspec
+gem push k256-sdk-0.1.0.gem
+```
+
+### PHP (Packagist)
+```bash
+cd php
+# Register package at packagist.org
+# Packagist auto-updates from GitHub tags
+```
+
+### Swift (Swift Package Manager)
+```bash
+# Tag and push from the swift directory
+git tag 0.1.0
+git push origin 0.1.0
+# SPM fetches directly from GitHub
+```
+
+### Julia (General Registry)
+```bash
+cd julia
+# Use Registrator.jl or LocalRegistry.jl
+# @JuliaRegistrator register
+```
+
+### C++ (vcpkg/Conan)
+```bash
+cd cpp
+# Submit port to vcpkg-ports or conan-center
+# Or install locally with CMake
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake --build build --target install
+```

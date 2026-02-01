@@ -341,19 +341,7 @@ function decodePoolUpdate(payload: ArrayBuffer, payloadView: DataView): PoolUpda
       },
     };
   } catch {
-    return {
-      type: 'pool_update',
-      data: {
-        sequence: 0,
-        slot: 0,
-        writeVersion: 0,
-        protocol: 'unknown',
-        poolAddress: '',
-        tokenMints: [],
-        tokenBalances: [],
-        tokenDecimals: [],
-      },
-    };
+    return null;
   }
 }
 
@@ -461,24 +449,6 @@ function decodeQuote(payload: ArrayBuffer, payloadView: DataView): DecodedMessag
       },
     };
   } catch {
-    return {
-      type: 'quote',
-      data: {
-        topicId: '',
-        timestampMs: 0,
-        sequence: 0,
-        inputMint: '',
-        outputMint: '',
-        inAmount: '0',
-        outAmount: '0',
-        priceImpactBps: 0,
-        contextSlot: 0,
-        algorithm: '',
-        isImprovement: false,
-        isCached: false,
-        isStale: false,
-        routePlan: null,
-      },
-    };
+    return null;
   }
 }

@@ -1,0 +1,48 @@
+{
+    "name": "k256/sdk",
+    "description": "Official PHP SDK for K256 - the gateway to Solana's liquidity ecosystem",
+    "version": "0.1.0",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "K256",
+            "email": "support@k256.xyz"
+        }
+    ],
+    "homepage": "https://k256.xyz",
+    "support": {
+        "issues": "https://github.com/k256-xyz/k256-sdks/issues",
+        "source": "https://github.com/k256-xyz/k256-sdks"
+    },
+    "keywords": [
+        "solana",
+        "swap",
+        "dex",
+        "aggregator",
+        "k256",
+        "websocket",
+        "defi",
+        "trading"
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ratchet/pawl": "^0.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "K256\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "K256\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

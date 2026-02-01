@@ -1,0 +1,51 @@
+# This package is independent from the monorepo workspace
+[workspace]
+
+[package]
+name = "k256-sdk"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["K256 <support@k256.xyz>"]
+description = "Official Rust SDK for K256 - the gateway to Solana's liquidity ecosystem"
+documentation = "https://docs.rs/k256-sdk"
+homepage = "https://k256.xyz"
+repository = "https://github.com/k256-xyz/k256-sdks"
+license = "MIT"
+readme = "README.md"
+keywords = ["solana", "swap", "dex", "aggregator", "k256"]
+categories = ["api-bindings", "cryptography::cryptocurrencies", "network-programming"]
+include = [
+    "src/**/*",
+    "examples/**/*",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+]
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
+futures-util = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+thiserror = "2"
+tracing = "0.1"
+bs58 = "0.5"
+url = "2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[features]
+default = []
+
+[[example]]
+name = "websocket"
+path = "examples/websocket.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

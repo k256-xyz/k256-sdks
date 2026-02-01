@@ -125,6 +125,19 @@ export interface PriorityFees {
   swapP75: number;
   swapP90: number;
   swapP99: number;
+  /** Number of swap samples used */
+  swapSamples: number;
+  /** Landing probability fees */
+  landingP50Fee: number;
+  landingP75Fee: number;
+  landingP90Fee: number;
+  landingP99Fee: number;
+  /** Top tier fees */
+  top10Fee: number;
+  top25Fee: number;
+  /** Spike detection */
+  spikeDetected: boolean;
+  spikeFee: number;
 }
 
 /**

@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "k256-sdk"
+version = "0.1.0"
+description = "Official Python SDK for K256 - the gateway to Solana's liquidity ecosystem"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "K256", email = "support@k256.xyz" }
+]
+maintainers = [
+    { name = "K256", email = "support@k256.xyz" }
+]
+keywords = [
+    "solana",
+    "swap",
+    "dex",
+    "aggregator",
+    "k256",
+    "websocket",
+    "defi",
+    "trading",
+    "cryptocurrency",
+    "blockchain"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Office/Business :: Financial",
+    "Typing :: Typed",
+]
+dependencies = [
+    "websockets>=12.0",
+    "aiohttp>=3.9",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.8",
+    "ruff>=0.2",
+]
+
+[project.urls]
+Homepage = "https://k256.xyz"
+Documentation = "https://docs.k256.xyz"
+Repository = "https://github.com/k256-xyz/k256-sdks"
+Issues = "https://github.com/k256-xyz/k256-sdks/issues"
+Changelog = "https://github.com/k256-xyz/k256-sdks/releases"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/k256",
+    "/README.md",
+    "/LICENSE",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["k256"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "C4", "UP"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

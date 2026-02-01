@@ -58,9 +58,19 @@ export function base58Encode(bytes: Uint8Array): string {
  * ```
  */
 export function base58Decode(str: string): Uint8Array {
+  if (str.length === 0) {
+    return new Uint8Array(0);
+  }
+
+  // Count leading '1's (they represent leading zero bytes)
+  let leadingZeros = 0;
+  for (let i = 0; i < str.length && str[i] === '1'; i++) {
+    leadingZeros++;
+  }
+
+  // Process remaining characters through base conversion
   const bytes = [0];
-  
-  for (let i = 0; i < str.length; i++) {
+  for (let i = leadingZeros; i < str.length; i++) {
     const char = str[i];
     const value = BASE58_ALPHABET.indexOf(char);
     
@@ -80,12 +90,30 @@ export function base58Decode(str: string): Uint8Array {
     }
   }
 
-  // Leading '1's are leading zeros
-  for (let i = 0; i < str.length && str[i] === '1'; i++) {
-    bytes.push(0);
+  // Build result: leading zeros + converted bytes (reversed)
+  bytes.reverse();
+  
+  // Handle case where input was all '1's (all leading zeros, no data to convert)
+  // In this case, bytes is just [0] from initialization, which we should ignore
+  if (leadingZeros > 0 && bytes.length === 1 && bytes[0] === 0) {
+    // Input was all '1's, return that many zero bytes
+    return new Uint8Array(leadingZeros);
   }
-
-  return new Uint8Array(bytes.reverse());
+  
+  // Remove leading zero from conversion if present (artifact of starting with [0])
+  const startIdx = bytes.length > 1 && bytes[0] === 0 ? 1 : 0;
+  
+  const result = new Uint8Array(leadingZeros + bytes.length - startIdx);
+  // Fill leading zeros
+  for (let i = 0; i < leadingZeros; i++) {
+    result[i] = 0;
+  }
+  // Copy converted bytes
+  for (let i = startIdx; i < bytes.length; i++) {
+    result[leadingZeros + i - startIdx] = bytes[i];
+  }
+  
+  return result;
 }
 
 /**
