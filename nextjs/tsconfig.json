@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react-jsx",
+    "declaration": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "paths": {
+      "@k256/widget-core": ["../widget-core/src/index.ts"],
+      "@k256/react": ["../react/src/index.tsx"]
+    }
+  },
+  "include": ["src"]
+}

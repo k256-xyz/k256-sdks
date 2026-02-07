@@ -1,0 +1,28 @@
+{
+  "name": "@k256/widget",
+  "version": "0.1.0",
+  "description": "K256 embeddable widgets for any website — drop-in Solana payments, swaps, tips, and gifts",
+  "main": "dist/widget.js",
+  "module": "dist/widget.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/widget.mjs",
+      "require": "./dist/widget.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@k256/widget-core": "file:../widget-core"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
