@@ -1,8 +1,9 @@
 /**
  * Leader Schedule WebSocket message types and interfaces
  * 
- * The leader-schedule service uses JSON mode over WebSocket.
- * Every message is a JSON text frame with:
+ * The leader-schedule WS uses bincode binary protocol (matching K2 pattern).
+ * Wire format: [1-byte tag][bincode payload]
+ * Every decoded message has:
  * - type: message type name
  * - kind: "snapshot" (full state) | "diff" (merge into snapshot) | "event" (append-only)
  * - key: primary key field for merging (on diff/event types)
@@ -88,12 +89,16 @@ export interface GossipPeer {
   tpuForwardsQuic: string | null;
   tpuForwardsUdp: string | null;
   tpuVote: string | null;
+  tpuVoteQuic: string | null;
   gossipAddr: string | null;
-  version: string;
   shredVersion: number;
-  stake: number;
+  version: string;
+  activatedStake: number;
   commission: number;
   isDelinquent: boolean;
+  votePubkey: string;
+  lastVote: number;
+  rootSlot: number;
   wallclock: number;
 }
 
@@ -103,7 +108,7 @@ export interface GossipSnapshotMessage {
   kind: 'snapshot';
   key: 'identity';
   data: {
-    timestamp: number;
+    timestampMs: number;
     count: number;
     peers: GossipPeer[];
   };

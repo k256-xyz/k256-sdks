@@ -2,8 +2,8 @@
  * Leader Schedule WebSocket Client
  * 
  * Connects to the K256 leader-schedule service via the Gateway.
- * Uses JSON mode (format: "json") — the server decodes rkyv binary
- * and sends typed JSON text frames.
+ * Binary mode by default (bincode protocol, matching K2 pattern).
+ * JSON mode opt-in via mode: 'json' (gateway decodes bincode to JSON).
  * 
  * @example
  * ```typescript
@@ -20,6 +20,7 @@
  * ```
  */
 
+import { decodeLeaderMessage } from './decoder';
 import {
   ALL_LEADER_CHANNELS,
   type LeaderChannelValue,
@@ -54,6 +55,8 @@ export interface LeaderWebSocketClientConfig {
   apiKey: string;
   /** Gateway URL (default: wss://gateway.k256.xyz/v1/leader-ws) */
   url?: string;
+  /** Message format: 'binary' (default, efficient) or 'json' (debugging via gateway) */
+  mode?: 'binary' | 'json';
   /** Channels to subscribe to (default: all channels) */
   channels?: LeaderChannelValue[];
   
@@ -141,7 +144,7 @@ export class LeaderWebSocketError extends Error {
 export class LeaderWebSocketClient {
   private ws: WebSocket | null = null;
   private readonly config: Required<Pick<LeaderWebSocketClientConfig,
-    'apiKey' | 'url' | 'channels' | 'autoReconnect' | 'reconnectDelayMs' | 'maxReconnectDelayMs' | 'maxReconnectAttempts'
+    'apiKey' | 'url' | 'mode' | 'channels' | 'autoReconnect' | 'reconnectDelayMs' | 'maxReconnectDelayMs' | 'maxReconnectAttempts'
   >> & LeaderWebSocketClientConfig;
   
   private _state: ConnectionState = 'disconnected';
@@ -160,6 +163,7 @@ export class LeaderWebSocketClient {
   constructor(config: LeaderWebSocketClientConfig) {
     this.config = {
       url: 'wss://gateway.k256.xyz/v1/leader-ws',
+      mode: 'binary',
       channels: ALL_LEADER_CHANNELS,
       autoReconnect: true,
       reconnectDelayMs: 1000,
@@ -182,26 +186,47 @@ export class LeaderWebSocketClient {
       try {
         const url = `${this.config.url}?apiKey=${encodeURIComponent(this.config.apiKey)}`;
         this.ws = new WebSocket(url);
+        
+        // Binary mode needs arraybuffer
+        if (this.config.mode === 'binary') {
+          this.ws.binaryType = 'arraybuffer';
+        }
 
         this.ws.onopen = () => {
           this.setState('connected');
           this.reconnectAttempts = 0;
           
-          // Subscribe with JSON mode
-          const subscribeMsg = JSON.stringify({
-            type: 'subscribe',
-            channels: this.config.channels,
-            format: 'json',
-          });
-          this.ws!.send(subscribeMsg);
+          if (this.config.mode === 'binary') {
+            // Binary mode: send 0x01 tag + JSON payload
+            const payload = JSON.stringify({ channels: this.config.channels });
+            const bytes = new TextEncoder().encode(payload);
+            const msg = new Uint8Array(1 + bytes.length);
+            msg[0] = 0x01; // MSG_SUBSCRIBE
+            msg.set(bytes, 1);
+            this.ws!.send(msg.buffer);
+          } else {
+            // JSON mode: send text (gateway decodes bincode to JSON)
+            this.ws!.send(JSON.stringify({
+              type: 'subscribe',
+              channels: this.config.channels,
+              format: 'json',
+            }));
+          }
           
           this.config.onConnect?.();
           resolve();
         };
 
         this.ws.onmessage = (event) => {
-          if (typeof event.data === 'string') {
-            this.handleMessage(event.data);
+          if (this.config.mode === 'binary' && event.data instanceof ArrayBuffer) {
+            // Binary mode: decode bincode with SDK decoder
+            const decoded = decodeLeaderMessage(event.data);
+            if (decoded) {
+              this.dispatchMessage(decoded);
+            }
+          } else if (typeof event.data === 'string') {
+            // JSON mode: parse text frames from gateway
+            this.handleJsonMessage(event.data);
           }
         };
 
@@ -266,51 +291,55 @@ export class LeaderWebSocketClient {
 
   // ── Private ──
 
-  private handleMessage(raw: string): void {
+  /** Handle JSON text frame (from gateway JSON mode) */
+  private handleJsonMessage(raw: string): void {
     try {
       const msg = JSON.parse(raw) as LeaderDecodedMessage;
-      
-      // Dispatch to typed callbacks
-      switch (msg.type) {
-        case 'subscribed':
-          this.config.onSubscribed?.(msg as LeaderSubscribedMessage);
-          break;
-        case 'leader_schedule':
-          this.config.onLeaderSchedule?.(msg as LeaderScheduleMessage);
-          break;
-        case 'gossip_snapshot':
-          this.config.onGossipSnapshot?.(msg as GossipSnapshotMessage);
-          break;
-        case 'gossip_diff':
-          this.config.onGossipDiff?.(msg as GossipDiffMessage);
-          break;
-        case 'slot_update':
-          this.config.onSlotUpdate?.(msg as SlotUpdateMessage);
-          break;
-        case 'routing_health':
-          this.config.onRoutingHealth?.(msg as RoutingHealthMessage);
-          break;
-        case 'skip_event':
-          this.config.onSkipEvent?.(msg as SkipEventMessage);
-          break;
-        case 'ip_change':
-          this.config.onIpChange?.(msg as IpChangeMessage);
-          break;
-        case 'heartbeat':
-          this.config.onHeartbeat?.(msg as LeaderHeartbeatMessage);
-          break;
-        case 'error':
-          this.config.onError?.(new LeaderWebSocketError(
-            'SERVER_ERROR', (msg as LeaderErrorMessage).data.message
-          ));
-          break;
-      }
-      
-      // Generic handler
-      this.config.onMessage?.(msg);
+      this.dispatchMessage(msg);
     } catch {
       this.config.onError?.(new LeaderWebSocketError('INVALID_MESSAGE', 'Failed to parse message'));
     }
+  }
+
+  /** Dispatch a decoded message to typed callbacks */
+  private dispatchMessage(msg: LeaderDecodedMessage): void {
+    switch (msg.type) {
+      case 'subscribed':
+        this.config.onSubscribed?.(msg as LeaderSubscribedMessage);
+        break;
+      case 'leader_schedule':
+        this.config.onLeaderSchedule?.(msg as LeaderScheduleMessage);
+        break;
+      case 'gossip_snapshot':
+        this.config.onGossipSnapshot?.(msg as GossipSnapshotMessage);
+        break;
+      case 'gossip_diff':
+        this.config.onGossipDiff?.(msg as GossipDiffMessage);
+        break;
+      case 'slot_update':
+        this.config.onSlotUpdate?.(msg as SlotUpdateMessage);
+        break;
+      case 'routing_health':
+        this.config.onRoutingHealth?.(msg as RoutingHealthMessage);
+        break;
+      case 'skip_event':
+        this.config.onSkipEvent?.(msg as SkipEventMessage);
+        break;
+      case 'ip_change':
+        this.config.onIpChange?.(msg as IpChangeMessage);
+        break;
+      case 'heartbeat':
+        this.config.onHeartbeat?.(msg as LeaderHeartbeatMessage);
+        break;
+      case 'error':
+        this.config.onError?.(new LeaderWebSocketError(
+          'SERVER_ERROR', (msg as LeaderErrorMessage).data.message
+        ));
+        break;
+    }
+    
+    // Generic handler
+    this.config.onMessage?.(msg);
   }
 
   private setState(state: ConnectionState): void {

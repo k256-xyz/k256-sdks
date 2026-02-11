@@ -34,6 +34,9 @@ export type {
   ConnectionState,
 } from './client';
 
+// Decoder (for advanced usage)
+export { decodeLeaderMessage, LeaderMessageTag } from './decoder';
+
 // Types
 export { LeaderChannel, ALL_LEADER_CHANNELS } from './types';
 export type {
