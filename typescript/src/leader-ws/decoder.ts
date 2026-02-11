@@ -72,13 +72,6 @@ function readPubkey(data: ArrayBuffer, o: Offset): string {
   return base58Encode(bytes);
 }
 
-/** Read a [u8; 32] pubkey as raw bytes */
-function readPubkeyBytes(data: ArrayBuffer, o: Offset): Uint8Array {
-  const bytes = new Uint8Array(data.slice(o.v, o.v + 32));
-  o.v += 32;
-  return bytes;
-}
-
 /** Read a wincode Vec<u8> as string */
 function readVecU8AsString(view: DataView, data: ArrayBuffer, o: Offset): string {
   const len = readU64(view, o);

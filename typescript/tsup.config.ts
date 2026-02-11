@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'ws/index': 'src/ws/index.ts',
+    'leader-ws/index': 'src/leader-ws/index.ts',
     'types/index': 'src/types/index.ts',
     'utils/index': 'src/utils/index.ts',
   },

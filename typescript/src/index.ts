@@ -28,7 +28,35 @@
 export * from './ws';
 
 // Leader Schedule WebSocket module (leader schedule, gossip, routing)
-export * from './leader-ws';
+// Explicit re-exports to avoid name collisions with ./ws (e.g. ConnectionState)
+export {
+  LeaderWebSocketClient,
+  LeaderWebSocketError,
+  decodeLeaderMessage,
+  LeaderMessageTag,
+  LeaderChannel,
+  ALL_LEADER_CHANNELS,
+} from './leader-ws';
+export type {
+  LeaderWebSocketClientConfig,
+  LeaderErrorCode,
+  ConnectionState as LeaderConnectionState,
+  LeaderChannelValue,
+  MessageKind,
+  MessageSchemaEntry,
+  LeaderDecodedMessage,
+  LeaderSubscribedMessage,
+  LeaderScheduleMessage,
+  GossipSnapshotMessage,
+  GossipDiffMessage,
+  GossipPeer,
+  SlotUpdateMessage,
+  RoutingHealthMessage,
+  SkipEventMessage,
+  IpChangeMessage,
+  LeaderHeartbeatMessage,
+  LeaderErrorMessage,
+} from './leader-ws';
 
 // Types module
 export * from './types';
