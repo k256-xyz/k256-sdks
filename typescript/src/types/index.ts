@@ -1,8 +1,8 @@
 /**
  * Shared type definitions for K256 SDK
- * 
+ *
  * These types are used across WebSocket and REST API modules.
- * 
+ *
  * @module @k256/sdk/types
  */
 
@@ -107,37 +107,59 @@ export interface RoutePlanStep {
 }
 
 /**
- * Priority fee estimates
+ * Per-writable-account fee data
+ *
+ * Solana's scheduler limits each writable account to 12M CU per block.
+ * Fee pricing is per-account: the fee you pay should be
+ * max(p75(account) for account in your writable accounts).
  */
-export interface PriorityFees {
+export interface AccountFee {
+  /** Account public key (Base58) */
+  pubkey: string;
+  /** Total transactions touching this account in the window */
+  totalTxs: number;
+  /** Number of slots where this account was active */
+  activeSlots: number;
+  /** Total CU consumed by transactions touching this account */
+  cuConsumed: number;
+  /** Account utilization percentage (0-100) of 12M CU limit */
+  utilizationPct: number;
+  /** 25th percentile fee in microlamports/CU */
+  p25: number;
+  /** 50th percentile fee in microlamports/CU */
+  p50: number;
+  /** 75th percentile fee in microlamports/CU */
+  p75: number;
+  /** 90th percentile fee in microlamports/CU */
+  p90: number;
+  /** Minimum non-zero fee observed */
+  minNonzeroPrice: number;
+}
+
+/**
+ * Fee market update (per-writable-account model)
+ *
+ * Replaces the old flat PriorityFees struct. Now provides per-account
+ * fee data so clients can price transactions based on the specific
+ * writable accounts they touch.
+ */
+export interface FeeMarket {
   /** Current slot */
   slot: number;
   /** Timestamp in milliseconds */
   timestampMs: number;
-  /** Recommended fee in microlamports */
+  /** Recommended fee in microlamports/CU (max p75 across hottest accounts) */
   recommended: number;
-  /** Network state (0=low, 1=normal, 2=high, 3=congested) */
+  /** Network state (0=low, 1=normal, 2=high, 3=extreme) */
   state: NetworkState;
   /** Whether data is stale */
   isStale: boolean;
-  /** Swap fee percentiles */
-  swapP50: number;
-  swapP75: number;
-  swapP90: number;
-  swapP99: number;
-  /** Number of swap samples used */
-  swapSamples: number;
-  /** Landing probability fees */
-  landingP50Fee: number;
-  landingP75Fee: number;
-  landingP90Fee: number;
-  landingP99Fee: number;
-  /** Top tier fees */
-  top10Fee: number;
-  top25Fee: number;
-  /** Spike detection */
-  spikeDetected: boolean;
-  spikeFee: number;
+  /** Block utilization percentage (0-100) */
+  blockUtilizationPct: number;
+  /** Number of blocks in the observation window */
+  blocksInWindow: number;
+  /** Per-account fee data */
+  accounts: AccountFee[];
 }
 
 /**

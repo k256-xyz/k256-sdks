@@ -66,39 +66,45 @@ export interface PoolUpdateMessage {
 }
 
 /**
- * Decoded priority fees from binary message
- * 
- * All fields from K2 PriorityFeesWire
+ * Decoded fee market from binary message (per-writable-account model)
+ *
+ * All fields from K2 FeeMarketWire
  */
-export interface PriorityFeesMessage {
-  type: 'priority_fees';
+export interface FeeMarketMessage {
+  type: 'fee_market';
   data: {
     slot: number;
     timestampMs: number;
-    /** Recommended priority fee in micro-lamports */
+    /** Recommended priority fee in microlamports/CU (max p75 across hottest accounts) */
     recommended: number;
     /** Fee state: 0=low, 1=normal, 2=high, 3=extreme */
     state: number;
     /** True if data is stale (no recent samples) */
     isStale: boolean;
-    // Swap fee percentiles (for ≥50K CU transactions)
-    swapP50: number;
-    swapP75: number;
-    swapP90: number;
-    swapP99: number;
-    /** Number of samples used for swap percentiles */
-    swapSamples: number;
-    // Landing probability fees (fee to land with X% probability)
-    landingP50Fee: number;
-    landingP75Fee: number;
-    landingP90Fee: number;
-    landingP99Fee: number;
-    // Top fee tiers
-    top10Fee: number;
-    top25Fee: number;
-    // Spike detection
-    spikeDetected: boolean;
-    spikeFee: number;
+    /** Block utilization percentage (0-100) */
+    blockUtilizationPct: number;
+    /** Number of blocks in the observation window */
+    blocksInWindow: number;
+    /** Per-writable-account fee data */
+    accounts: {
+      /** Account public key (Base58) */
+      pubkey: string;
+      /** Total transactions touching this account */
+      totalTxs: number;
+      /** Active slots for this account */
+      activeSlots: number;
+      /** Total CU consumed */
+      cuConsumed: number;
+      /** Utilization percentage (0-100) of 12M CU limit */
+      utilizationPct: number;
+      /** Fee percentiles in microlamports/CU */
+      p25: number;
+      p50: number;
+      p75: number;
+      p90: number;
+      /** Minimum non-zero fee observed */
+      minNonzeroPrice: number;
+    }[];
   };
 }
 
@@ -216,7 +222,7 @@ export interface PongMessage {
  */
 export type DecodedMessage =
   | PoolUpdateMessage
-  | PriorityFeesMessage
+  | FeeMarketMessage
   | BlockhashMessage
   | QuoteMessage
   | HeartbeatMessage

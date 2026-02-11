@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/mr-tron/base58"
 )
@@ -201,31 +202,63 @@ func DecodePoolUpdateBatch(data []byte) ([]*PoolUpdate, error) {
 	return updates, nil
 }
 
-// DecodePriorityFees decodes priority fees from bincode format (119 bytes).
-func DecodePriorityFees(data []byte) (*PriorityFees, error) {
-	if len(data) < 119 {
-		return nil, fmt.Errorf("payload too short: %d < 119", len(data))
+// DecodeFeeMarket decodes fee market from bincode format (variable length).
+// Header: 42 bytes. Per account: 92 bytes each.
+func DecodeFeeMarket(data []byte) (*FeeMarket, error) {
+	if len(data) < 42 {
+		return nil, fmt.Errorf("payload too short: %d < 42", len(data))
 	}
 
-	return &PriorityFees{
-		Slot:          binary.LittleEndian.Uint64(data[0:]),
-		TimestampMs:   binary.LittleEndian.Uint64(data[8:]),
-		Recommended:   binary.LittleEndian.Uint64(data[16:]),
-		State:         NetworkState(data[24]),
-		IsStale:       data[25] != 0,
-		SwapP50:       binary.LittleEndian.Uint64(data[26:]),
-		SwapP75:       binary.LittleEndian.Uint64(data[34:]),
-		SwapP90:       binary.LittleEndian.Uint64(data[42:]),
-		SwapP99:       binary.LittleEndian.Uint64(data[50:]),
-		SwapSamples:   binary.LittleEndian.Uint32(data[58:]),
-		LandingP50Fee: binary.LittleEndian.Uint64(data[62:]),
-		LandingP75Fee: binary.LittleEndian.Uint64(data[70:]),
-		LandingP90Fee: binary.LittleEndian.Uint64(data[78:]),
-		LandingP99Fee: binary.LittleEndian.Uint64(data[86:]),
-		Top10Fee:      binary.LittleEndian.Uint64(data[94:]),
-		Top25Fee:      binary.LittleEndian.Uint64(data[102:]),
-		SpikeDetected: data[110] != 0,
-		SpikeFee:      binary.LittleEndian.Uint64(data[111:]),
+	slot := binary.LittleEndian.Uint64(data[0:])
+	timestampMs := binary.LittleEndian.Uint64(data[8:])
+	recommended := binary.LittleEndian.Uint64(data[16:])
+	state := NetworkState(data[24])
+	isStale := data[25] != 0
+	blockUtilPct := math.Float32frombits(binary.LittleEndian.Uint32(data[26:]))
+	blocksInWindow := binary.LittleEndian.Uint32(data[30:])
+	accountCount := binary.LittleEndian.Uint64(data[34:])
+
+	offset := 42
+	accounts := make([]AccountFee, 0, accountCount)
+	for i := uint64(0); i < accountCount; i++ {
+		if offset+92 > len(data) {
+			return nil, fmt.Errorf("insufficient data for account %d", i)
+		}
+		pubkey := base58.Encode(data[offset : offset+32])
+		totalTxs := binary.LittleEndian.Uint32(data[offset+32:])
+		activeSlots := binary.LittleEndian.Uint32(data[offset+36:])
+		cuConsumed := binary.LittleEndian.Uint64(data[offset+40:])
+		utilizationPct := math.Float32frombits(binary.LittleEndian.Uint32(data[offset+48:]))
+		p25 := binary.LittleEndian.Uint64(data[offset+52:])
+		p50 := binary.LittleEndian.Uint64(data[offset+60:])
+		p75 := binary.LittleEndian.Uint64(data[offset+68:])
+		p90 := binary.LittleEndian.Uint64(data[offset+76:])
+		minNonzeroPrice := binary.LittleEndian.Uint64(data[offset+84:])
+
+		accounts = append(accounts, AccountFee{
+			Pubkey:          pubkey,
+			TotalTxs:        totalTxs,
+			ActiveSlots:     activeSlots,
+			CuConsumed:      cuConsumed,
+			UtilizationPct:  utilizationPct,
+			P25:             p25,
+			P50:             p50,
+			P75:             p75,
+			P90:             p90,
+			MinNonzeroPrice: minNonzeroPrice,
+		})
+		offset += 92
+	}
+
+	return &FeeMarket{
+		Slot:                slot,
+		TimestampMs:         timestampMs,
+		Recommended:         recommended,
+		State:               state,
+		IsStale:             isStale,
+		BlockUtilizationPct: blockUtilPct,
+		BlocksInWindow:      blocksInWindow,
+		Accounts:            accounts,
 	}, nil
 }
 

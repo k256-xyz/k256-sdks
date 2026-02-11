@@ -25,7 +25,7 @@ const client = new K256WebSocketClient({
   
   // Message callbacks
   onPoolUpdate: (update) => console.log('Pool:', update.data.poolAddress),
-  onPriorityFees: (fees) => console.log('Fees:', fees.data.recommended),
+  onFeeMarket: (fees) => console.log('Fees:', fees.data.recommended),
   onBlockhash: (bh) => console.log('Blockhash:', bh.data.blockhash),
   
   // Connection callbacks
@@ -67,7 +67,7 @@ client.disconnect();
 | Type | Description |
 |------|-------------|
 | `pool_update` | DEX pool state change |
-| `priority_fees` | Fee estimates (~400ms updates) |
+| `fee_market` | Per-writable-account fee market (~400ms updates) |
 | `blockhash` | Latest blockhash (~400ms updates) |
 | `quote` | Streaming quote update |
 | `subscribed` | Subscription confirmed |

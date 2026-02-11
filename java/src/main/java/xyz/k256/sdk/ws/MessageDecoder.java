@@ -23,14 +23,14 @@ public final class MessageDecoder {
     }
 
     /**
-     * Decode priority fees from binary payload.
-     * Wire format: 119 bytes, little-endian.
+     * Decode fee market from binary payload (per-writable-account model).
+     * Variable-length wire format: 42-byte header + N × 92 bytes per account.
      *
      * @param payload Binary payload (without message type byte)
-     * @return Decoded PriorityFees or null if payload is too short
+     * @return Decoded FeeMarket or null if payload is too short
      */
-    public static PriorityFees decodePriorityFees(byte[] payload) {
-        if (payload.length < 119) {
+    public static FeeMarket decodeFeeMarket(byte[] payload) {
+        if (payload.length < 42) {
             return null;
         }
 
@@ -41,25 +41,36 @@ public final class MessageDecoder {
         long recommended = buf.getLong(16);
         NetworkState state = NetworkState.fromValue(buf.get(24) & 0xFF);
         boolean isStale = buf.get(25) != 0;
-        long swapP50 = buf.getLong(26);
-        long swapP75 = buf.getLong(34);
-        long swapP90 = buf.getLong(42);
-        long swapP99 = buf.getLong(50);
-        int swapSamples = buf.getInt(58);
-        long landingP50Fee = buf.getLong(62);
-        long landingP75Fee = buf.getLong(70);
-        long landingP90Fee = buf.getLong(78);
-        long landingP99Fee = buf.getLong(86);
-        long top10Fee = buf.getLong(94);
-        long top25Fee = buf.getLong(102);
-        boolean spikeDetected = buf.get(110) != 0;
-        long spikeFee = buf.getLong(111);
+        float blockUtilizationPct = buf.getFloat(26);
+        int blocksInWindow = buf.getInt(30);
+        long accountCount = buf.getLong(34);
 
-        return new PriorityFees(
+        int offset = 42;
+        List<AccountFee> accounts = new ArrayList<>((int) accountCount);
+        for (int i = 0; i < accountCount && offset + 92 <= payload.length; i++) {
+            byte[] pubkeyBytes = new byte[32];
+            System.arraycopy(payload, offset, pubkeyBytes, 0, 32);
+            String pubkey = Base58.encode(pubkeyBytes);
+            int totalTxs = buf.getInt(offset + 32);
+            int activeSlots = buf.getInt(offset + 36);
+            long cuConsumed = buf.getLong(offset + 40);
+            float utilizationPct = buf.getFloat(offset + 48);
+            long p25 = buf.getLong(offset + 52);
+            long p50 = buf.getLong(offset + 60);
+            long p75 = buf.getLong(offset + 68);
+            long p90 = buf.getLong(offset + 76);
+            long minNonzeroPrice = buf.getLong(offset + 84);
+
+            accounts.add(new AccountFee(
+                pubkey, totalTxs, activeSlots, cuConsumed, utilizationPct,
+                p25, p50, p75, p90, minNonzeroPrice
+            ));
+            offset += 92;
+        }
+
+        return new FeeMarket(
             slot, timestampMs, recommended, state, isStale,
-            swapP50, swapP75, swapP90, swapP99, swapSamples,
-            landingP50Fee, landingP75Fee, landingP90Fee, landingP99Fee,
-            top10Fee, top25Fee, spikeDetected, spikeFee
+            blockUtilizationPct, blocksInWindow, accounts
         );
     }
 

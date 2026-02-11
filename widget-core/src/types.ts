@@ -27,7 +27,7 @@ export interface K256EmbedOptions {
   token?: string
   /** Title override */
   title?: string
-  /** Base URL for the widget host (defaults to https://app.k256.io) */
+  /** Base URL for the widget host (defaults to https://app.k256.xyz) */
   baseUrl?: string
 }
 

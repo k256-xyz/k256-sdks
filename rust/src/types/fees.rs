@@ -1,4 +1,4 @@
-//! Priority fees types.
+//! Fee market types (per-writable-account model).
 
 use serde::{Deserialize, Serialize};
 
@@ -30,43 +30,55 @@ impl TryFrom<u8> for NetworkState {
     }
 }
 
-/// Priority fee recommendations from K256.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PriorityFees {
+/// Per-writable-account fee data.
+///
+/// Solana's scheduler limits each writable account to 12M CU per block.
+/// Fee pricing is per-account: `max(p75(account) for account in writable_accounts)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AccountFee {
+    /// Account public key (base58)
+    pub pubkey: String,
+    /// Total transactions touching this account in the window
+    pub total_txs: u32,
+    /// Number of slots where this account was active
+    pub active_slots: u32,
+    /// Total CU consumed by transactions touching this account
+    pub cu_consumed: u64,
+    /// Account utilization percentage (0-100) of 12M CU limit
+    pub utilization_pct: f32,
+    /// 25th percentile fee in microlamports/CU
+    pub p25: u64,
+    /// 50th percentile fee in microlamports/CU
+    pub p50: u64,
+    /// 75th percentile fee in microlamports/CU
+    pub p75: u64,
+    /// 90th percentile fee in microlamports/CU
+    pub p90: u64,
+    /// Minimum non-zero fee observed
+    pub min_nonzero_price: u64,
+}
+
+/// Fee market update (per-writable-account model).
+///
+/// Replaces the old flat `PriorityFees` struct. Now provides per-account
+/// fee data so clients can price transactions based on the specific
+/// writable accounts they touch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FeeMarket {
     /// Current Solana slot
     pub slot: u64,
     /// Unix timestamp in milliseconds
     pub timestamp_ms: u64,
-    /// Recommended fee in microlamports per CU
+    /// Recommended fee in microlamports/CU (max p75 across hottest accounts)
     pub recommended: u64,
     /// Network congestion state
     pub state: NetworkState,
     /// Whether data may be stale
     pub is_stale: bool,
-    /// 50th percentile swap fee (≥50K CU txns)
-    pub swap_p50: u64,
-    /// 75th percentile swap fee
-    pub swap_p75: u64,
-    /// 90th percentile swap fee
-    pub swap_p90: u64,
-    /// 99th percentile swap fee
-    pub swap_p99: u64,
-    /// Number of samples used
-    pub swap_samples: u32,
-    /// Fee to land with 50% probability
-    pub landing_p50_fee: u64,
-    /// Fee to land with 75% probability
-    pub landing_p75_fee: u64,
-    /// Fee to land with 90% probability
-    pub landing_p90_fee: u64,
-    /// Fee to land with 99% probability
-    pub landing_p99_fee: u64,
-    /// Fee at top 10% tier
-    pub top_10_fee: u64,
-    /// Fee at top 25% tier
-    pub top_25_fee: u64,
-    /// True if fee spike detected
-    pub spike_detected: bool,
-    /// Fee during spike condition
-    pub spike_fee: u64,
+    /// Block utilization percentage (0-100)
+    pub block_utilization_pct: f32,
+    /// Number of blocks in the observation window
+    pub blocks_in_window: u32,
+    /// Per-account fee data
+    pub accounts: Vec<AccountFee>,
 }

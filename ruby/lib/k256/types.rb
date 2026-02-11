@@ -48,27 +48,33 @@ module K256
     keyword_init: true
   )
 
-  # Priority fee recommendations from K256.
-  # Wire format: 119 bytes, little-endian.
-  PriorityFees = Struct.new(
-    :slot,             # offset 0
-    :timestamp_ms,     # offset 8
-    :recommended,      # offset 16
-    :state,            # offset 24
-    :is_stale,         # offset 25
-    :swap_p50,         # offset 26
-    :swap_p75,         # offset 34
-    :swap_p90,         # offset 42
-    :swap_p99,         # offset 50
-    :swap_samples,     # offset 58
-    :landing_p50_fee,  # offset 62
-    :landing_p75_fee,  # offset 70
-    :landing_p90_fee,  # offset 78
-    :landing_p99_fee,  # offset 86
-    :top_10_fee,       # offset 94
-    :top_25_fee,       # offset 102
-    :spike_detected,   # offset 110
-    :spike_fee,        # offset 111
+  # Per-writable-account fee data.
+  # Solana's scheduler limits each writable account to 12M CU per block.
+  AccountFee = Struct.new(
+    :pubkey,            # base58 account public key
+    :total_txs,         # transactions touching this account in window
+    :active_slots,      # slots where this account was active
+    :cu_consumed,       # total CU consumed
+    :utilization_pct,   # utilization percentage (0-100) of 12M CU limit
+    :p25,               # 25th percentile fee (microlamports/CU)
+    :p50,               # 50th percentile fee
+    :p75,               # 75th percentile fee
+    :p90,               # 90th percentile fee
+    :min_nonzero_price, # minimum non-zero fee observed
+    keyword_init: true
+  )
+
+  # Fee market update (per-writable-account model).
+  # Variable-length wire format: 42-byte header + N × 92 bytes per account.
+  FeeMarket = Struct.new(
+    :slot,                   # current Solana slot
+    :timestamp_ms,           # unix timestamp in milliseconds
+    :recommended,            # recommended fee (microlamports/CU)
+    :state,                  # network state (0=low, 1=normal, 2=high, 3=extreme)
+    :is_stale,               # whether data is stale
+    :block_utilization_pct,  # block utilization percentage (0-100)
+    :blocks_in_window,       # blocks in observation window
+    :accounts,               # array of AccountFee
     keyword_init: true
   )
 

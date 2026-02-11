@@ -102,44 +102,50 @@ type Pool struct {
 	FeeRate uint32 `json:"fee_rate"`
 }
 
-// PriorityFees represents priority fee recommendations from K256.
-type PriorityFees struct {
+// AccountFee represents per-writable-account fee data from K256.
+// Solana's scheduler limits each writable account to 12M CU per block.
+// Fee pricing is per-account: max(p75(account) for account in writable_accounts).
+type AccountFee struct {
+	// Base58-encoded account public key
+	Pubkey string `json:"pubkey"`
+	// Total transactions touching this account in the window
+	TotalTxs uint32 `json:"total_txs"`
+	// Number of slots where this account was active
+	ActiveSlots uint32 `json:"active_slots"`
+	// Total CU consumed by transactions touching this account
+	CuConsumed uint64 `json:"cu_consumed"`
+	// Account utilization percentage (0-100) of 12M CU limit
+	UtilizationPct float32 `json:"utilization_pct"`
+	// 25th percentile fee in microlamports/CU
+	P25 uint64 `json:"p25"`
+	// 50th percentile fee in microlamports/CU
+	P50 uint64 `json:"p50"`
+	// 75th percentile fee in microlamports/CU
+	P75 uint64 `json:"p75"`
+	// 90th percentile fee in microlamports/CU
+	P90 uint64 `json:"p90"`
+	// Minimum non-zero fee observed
+	MinNonzeroPrice uint64 `json:"min_nonzero_price"`
+}
+
+// FeeMarket represents a fee market update from K256 (per-writable-account model).
+type FeeMarket struct {
 	// Current Solana slot
 	Slot uint64 `json:"slot"`
 	// Unix timestamp in milliseconds
 	TimestampMs uint64 `json:"timestamp_ms"`
-	// Recommended fee in microlamports per CU
+	// Recommended fee in microlamports/CU (max p75 across hottest accounts)
 	Recommended uint64 `json:"recommended"`
 	// Network congestion state
 	State NetworkState `json:"state"`
 	// Whether data may be stale
 	IsStale bool `json:"is_stale"`
-	// 50th percentile swap fee (≥50K CU txns)
-	SwapP50 uint64 `json:"swap_p50"`
-	// 75th percentile swap fee
-	SwapP75 uint64 `json:"swap_p75"`
-	// 90th percentile swap fee
-	SwapP90 uint64 `json:"swap_p90"`
-	// 99th percentile swap fee
-	SwapP99 uint64 `json:"swap_p99"`
-	// Number of samples used
-	SwapSamples uint32 `json:"swap_samples"`
-	// Fee to land with 50% probability
-	LandingP50Fee uint64 `json:"landing_p50_fee"`
-	// Fee to land with 75% probability
-	LandingP75Fee uint64 `json:"landing_p75_fee"`
-	// Fee to land with 90% probability
-	LandingP90Fee uint64 `json:"landing_p90_fee"`
-	// Fee to land with 99% probability
-	LandingP99Fee uint64 `json:"landing_p99_fee"`
-	// Fee at top 10% tier
-	Top10Fee uint64 `json:"top_10_fee"`
-	// Fee at top 25% tier
-	Top25Fee uint64 `json:"top_25_fee"`
-	// True if fee spike detected
-	SpikeDetected bool `json:"spike_detected"`
-	// Fee during spike condition
-	SpikeFee uint64 `json:"spike_fee"`
+	// Block utilization percentage (0-100)
+	BlockUtilizationPct float32 `json:"block_utilization_pct"`
+	// Number of blocks in the observation window
+	BlocksInWindow uint32 `json:"blocks_in_window"`
+	// Per-account fee data
+	Accounts []AccountFee `json:"accounts"`
 }
 
 // Blockhash represents a recent blockhash from K256.

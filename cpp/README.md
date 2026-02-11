@@ -41,14 +41,15 @@ cmake --install .
 #include <iostream>
 
 int main() {
-    // Example: Decode priority fees from binary payload
+    // Example: Decode fee market from binary payload
     std::vector<uint8_t> payload = /* received from WebSocket */;
-    
-    auto fees = k256::decode_priority_fees(payload.data(), payload.size());
+
+    auto fees = k256::decode_fee_market(payload.data(), payload.size());
     if (fees) {
         std::cout << "Slot: " << fees->slot << std::endl;
         std::cout << "Recommended fee: " << fees->recommended << " microlamports" << std::endl;
         std::cout << "Network state: " << static_cast<int>(fees->state) << std::endl;
+        std::cout << "Accounts: " << fees->accounts.size() << std::endl;
     }
 
     // Example: Decode blockhash
@@ -76,7 +77,7 @@ int main() {
 ```
 k256/
 ├── k256.hpp      # Main header (include this)
-├── types.hpp     # PoolUpdate, PriorityFees, Blockhash, etc.
+├── types.hpp     # PoolUpdate, FeeMarket, AccountFee, Blockhash, etc.
 ├── decoder.hpp   # Binary message decoder
 └── base58.hpp    # Base58 encoding utilities
 ```

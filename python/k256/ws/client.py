@@ -12,7 +12,7 @@ from websockets.client import WebSocketClientProtocol
 
 from k256.types import (
     PoolUpdate,
-    PriorityFees,
+    FeeMarket,
     Blockhash,
     Quote,
     Heartbeat,
@@ -130,7 +130,7 @@ class K256WebSocketClient:
         
         # Callbacks
         self._on_pool_update: Optional[Callable[[PoolUpdate], None]] = None
-        self._on_priority_fees: Optional[Callable[[PriorityFees], None]] = None
+        self._on_fee_market: Optional[Callable[[FeeMarket], None]] = None
         self._on_blockhash: Optional[Callable[[Blockhash], None]] = None
         self._on_quote: Optional[Callable[[Quote], None]] = None
         self._on_heartbeat: Optional[Callable[[Heartbeat], None]] = None
@@ -149,9 +149,9 @@ class K256WebSocketClient:
         self._on_pool_update = callback
         return callback
     
-    def on_priority_fees(self, callback: Callable[[PriorityFees], None]) -> Callable[[PriorityFees], None]:
-        """Register a callback for priority fee updates."""
-        self._on_priority_fees = callback
+    def on_fee_market(self, callback: Callable[[FeeMarket], None]) -> Callable[[FeeMarket], None]:
+        """Register a callback for fee market updates."""
+        self._on_fee_market = callback
         return callback
     
     def on_blockhash(self, callback: Callable[[Blockhash], None]) -> Callable[[Blockhash], None]:
@@ -273,8 +273,8 @@ class K256WebSocketClient:
             
             if isinstance(decoded, PoolUpdate) and self._on_pool_update:
                 self._on_pool_update(decoded)
-            elif isinstance(decoded, PriorityFees) and self._on_priority_fees:
-                self._on_priority_fees(decoded)
+            elif isinstance(decoded, FeeMarket) and self._on_fee_market:
+                self._on_fee_market(decoded)
             elif isinstance(decoded, Blockhash) and self._on_blockhash:
                 self._on_blockhash(decoded)
             elif isinstance(decoded, Quote) and self._on_quote:

@@ -130,15 +130,18 @@ const client = new K256WebSocketClient({
     }
   },
   
-  onPriorityFees: (msg) => {
+  onFeeMarket: (msg) => {
     stats.priorityFees++;
     const { data } = msg;
-    
-    console.log(`⚡ Priority Fees #${stats.priorityFees}:`);
+
+    console.log(`⚡ Fee Market #${stats.priorityFees}:`);
     console.log(`   Recommended: ${data.recommended.toLocaleString()} microlamports`);
     console.log(`   State: ${['Low', 'Normal', 'High', 'Congested'][data.state] || data.state}`);
-    console.log(`   Swap P50/P90/P99: ${data.swapP50}/${data.swapP90}/${data.swapP99}`);
+    console.log(`   Block util: ${data.blockUtilizationPct.toFixed(1)}%, Accounts: ${data.accounts.length}`);
     console.log(`   Stale: ${data.isStale}`);
+    for (const acct of data.accounts.slice(0, 3)) {
+      console.log(`     ${acct.pubkey}: p75=${acct.p75}, util=${acct.utilizationPct.toFixed(1)}%`);
+    }
   },
   
   onBlockhash: (msg) => {

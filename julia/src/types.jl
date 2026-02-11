@@ -56,28 +56,35 @@ struct PoolUpdate
 end
 
 """
-Priority fee recommendations from K256.
-Wire format: 119 bytes, little-endian.
+Per-writable-account fee data.
+Solana's scheduler limits each writable account to 12M CU per block.
 """
-struct PriorityFees
-    slot::UInt64             # offset 0
-    timestamp_ms::UInt64     # offset 8
-    recommended::UInt64      # offset 16
-    state::UInt8             # offset 24
-    is_stale::Bool           # offset 25
-    swap_p50::UInt64         # offset 26
-    swap_p75::UInt64         # offset 34
-    swap_p90::UInt64         # offset 42
-    swap_p99::UInt64         # offset 50
-    swap_samples::UInt32     # offset 58
-    landing_p50_fee::UInt64  # offset 62
-    landing_p75_fee::UInt64  # offset 70
-    landing_p90_fee::UInt64  # offset 78
-    landing_p99_fee::UInt64  # offset 86
-    top_10_fee::UInt64       # offset 94
-    top_25_fee::UInt64       # offset 102
-    spike_detected::Bool     # offset 110
-    spike_fee::UInt64        # offset 111
+struct AccountFee
+    pubkey::String            # base58 account public key
+    total_txs::UInt32         # transactions touching this account in window
+    active_slots::UInt32      # slots where this account was active
+    cu_consumed::UInt64       # total CU consumed
+    utilization_pct::Float32  # utilization percentage (0-100) of 12M CU limit
+    p25::UInt64               # 25th percentile fee (microlamports/CU)
+    p50::UInt64               # 50th percentile fee
+    p75::UInt64               # 75th percentile fee
+    p90::UInt64               # 90th percentile fee
+    min_nonzero_price::UInt64 # minimum non-zero fee observed
+end
+
+"""
+Fee market update (per-writable-account model).
+Variable-length wire format: 42-byte header + N × 92 bytes per account.
+"""
+struct FeeMarket
+    slot::UInt64                    # current Solana slot
+    timestamp_ms::UInt64            # unix timestamp in milliseconds
+    recommended::UInt64             # recommended fee (microlamports/CU)
+    state::UInt8                    # network state (0=low, 1=normal, 2=high, 3=extreme)
+    is_stale::Bool                  # whether data is stale
+    block_utilization_pct::Float32  # block utilization percentage (0-100)
+    blocks_in_window::UInt32        # blocks in observation window
+    accounts::Vector{AccountFee}    # per-account fee data
 end
 
 """

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace K256;
 
-use K256\Types\{Blockhash, NetworkState, OrderLevel, PoolUpdate, PriorityFees, Quote};
+use K256\Types\{AccountFee, Blockhash, FeeMarket, NetworkState, OrderLevel, PoolUpdate, Quote};
 use K256\Utils\Base58;
 
 /**
@@ -18,37 +18,62 @@ final class Decoder
     }
 
     /**
-     * Decode priority fees from binary payload.
-     * Wire format: 119 bytes, little-endian.
+     * Decode fee market from binary payload (per-writable-account model).
+     * Variable-length wire format: 42-byte header + N × 92 bytes per account.
      *
      * @param string $data Binary payload (without message type byte)
-     * @return PriorityFees|null Decoded fees or null if too short
+     * @return FeeMarket|null Decoded fee market or null if too short
      */
-    public static function decodePriorityFees(string $data): ?PriorityFees
+    public static function decodeFeeMarket(string $data): ?FeeMarket
     {
-        if (strlen($data) < 119) {
+        if (strlen($data) < 42) {
             return null;
         }
 
-        return new PriorityFees(
-            slot: self::readU64LE($data, 0),
-            timestampMs: self::readU64LE($data, 8),
-            recommended: self::readU64LE($data, 16),
-            state: NetworkState::tryFrom(ord($data[24])) ?? NetworkState::Normal,
-            isStale: ord($data[25]) !== 0,
-            swapP50: self::readU64LE($data, 26),
-            swapP75: self::readU64LE($data, 34),
-            swapP90: self::readU64LE($data, 42),
-            swapP99: self::readU64LE($data, 50),
-            swapSamples: self::readU32LE($data, 58),
-            landingP50Fee: self::readU64LE($data, 62),
-            landingP75Fee: self::readU64LE($data, 70),
-            landingP90Fee: self::readU64LE($data, 78),
-            landingP99Fee: self::readU64LE($data, 86),
-            top10Fee: self::readU64LE($data, 94),
-            top25Fee: self::readU64LE($data, 102),
-            spikeDetected: ord($data[110]) !== 0,
-            spikeFee: self::readU64LE($data, 111),
+        $slot = self::readU64LE($data, 0);
+        $timestampMs = self::readU64LE($data, 8);
+        $recommended = self::readU64LE($data, 16);
+        $state = NetworkState::tryFrom(ord($data[24])) ?? NetworkState::Normal;
+        $isStale = ord($data[25]) !== 0;
+        $blockUtilizationPct = self::readF32LE($data, 26);
+        $blocksInWindow = self::readU32LE($data, 30);
+        $accountCount = self::readU64LE($data, 34);
+
+        $accounts = [];
+        $offset = 42;
+        for ($i = 0; $i < $accountCount && $offset + 92 <= strlen($data); $i++) {
+            $pubkey = Base58::encode(substr($data, $offset, 32));
+            $totalTxs = self::readU32LE($data, $offset + 32);
+            $activeSlots = self::readU32LE($data, $offset + 36);
+            $cuConsumed = self::readU64LE($data, $offset + 40);
+            $utilizationPct = self::readF32LE($data, $offset + 48);
+            $p25 = self::readU64LE($data, $offset + 52);
+            $p50 = self::readU64LE($data, $offset + 60);
+            $p75 = self::readU64LE($data, $offset + 68);
+            $p90 = self::readU64LE($data, $offset + 76);
+            $minNonzeroPrice = self::readU64LE($data, $offset + 84);
+
+            $accounts[] = new AccountFee(
+                pubkey: $pubkey,
+                totalTxs: $totalTxs,
+                activeSlots: $activeSlots,
+                cuConsumed: $cuConsumed,
+                utilizationPct: $utilizationPct,
+                p25: $p25, p50: $p50, p75: $p75, p90: $p90,
+                minNonzeroPrice: $minNonzeroPrice,
+            );
+            $offset += 92;
+        }
+
+        return new FeeMarket(
+            slot: $slot,
+            timestampMs: $timestampMs,
+            recommended: $recommended,
+            state: $state,
+            isStale: $isStale,
+            blockUtilizationPct: $blockUtilizationPct,
+            blocksInWindow: $blocksInWindow,
+            accounts: $accounts,
         );
     }
 
@@ -389,6 +414,12 @@ final class Decoder
     private static function readI32LE(string $data, int $offset): int
     {
         $values = unpack('l', substr($data, $offset, 4));
+        return $values[1];
+    }
+
+    private static function readF32LE(string $data, int $offset): float
+    {
+        $values = unpack('g', substr($data, $offset, 4));
         return $values[1];
     }
 }

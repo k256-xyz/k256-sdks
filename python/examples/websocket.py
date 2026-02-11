@@ -48,13 +48,14 @@ async def main():
         if update.best_ask:
             print(f"  Best Ask: price={update.best_ask.price}, size={update.best_ask.size}")
 
-    # Handle priority fees
-    @client.on_priority_fees
+    # Handle fee market updates
+    @client.on_fee_market
     def handle_fees(fees):
-        print(f"[Priority Fees] slot={fees.slot}, recommended={fees.recommended} microlamports")
-        print(f"  State: {fees.state}, IsStale: {fees.is_stale}")
-        print(f"  Swap percentiles: p50={fees.swap_p50}, p75={fees.swap_p75}, p90={fees.swap_p90}, p99={fees.swap_p99}")
-        print(f"  Samples: {fees.swap_samples}")
+        print(f"[Fee Market] slot={fees.slot}, recommended={fees.recommended} microlamports")
+        print(f"  State: {fees.state}, IsStale: {fees.is_stale}, BlockUtil: {fees.block_utilization_pct:.1f}%")
+        print(f"  Accounts: {len(fees.accounts)}")
+        for acct in fees.accounts:
+            print(f"    {acct.pubkey}: p75={acct.p75}, util={acct.utilization_pct:.1f}%")
 
     # Handle blockhash updates
     @client.on_blockhash

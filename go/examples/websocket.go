@@ -60,14 +60,15 @@ func main() {
 		}
 	})
 
-	// Handle priority fees
-	ws.OnPriorityFees(func(fees *k256.PriorityFees) {
-		fmt.Printf("[Priority Fees] slot=%d, recommended=%d microlamports\n", 
+	// Handle fee market updates
+	ws.OnFeeMarket(func(fees *k256.FeeMarket) {
+		fmt.Printf("[Fee Market] slot=%d, recommended=%d microlamports\n",
 			fees.Slot, fees.Recommended)
-		fmt.Printf("  State: %d, IsStale: %v\n", fees.State, fees.IsStale)
-		fmt.Printf("  Swap percentiles: p50=%d, p75=%d, p90=%d, p99=%d\n",
-			fees.SwapP50, fees.SwapP75, fees.SwapP90, fees.SwapP99)
-		fmt.Printf("  Samples: %d\n", fees.SwapSamples)
+		fmt.Printf("  State: %d, IsStale: %v, BlockUtil: %.1f%%\n", fees.State, fees.IsStale, fees.BlockUtilizationPct)
+		fmt.Printf("  Accounts: %d\n", len(fees.Accounts))
+		for _, acct := range fees.Accounts {
+			fmt.Printf("    %s: p75=%d, util=%.1f%%\n", acct.Pubkey, acct.P75, acct.UtilizationPct)
+		}
 	})
 
 	// Handle blockhash updates

@@ -31,7 +31,7 @@ interface K256WidgetBaseProps {
   title?: string
   amount?: number
   token?: string
-  /** Base URL override (defaults to https://app.k256.io) */
+  /** Base URL override (defaults to https://app.k256.xyz) */
   baseUrl?: string
   className?: string
   style?: React.CSSProperties

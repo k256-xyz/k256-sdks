@@ -24,12 +24,13 @@ add https://github.com/k256-xyz/k256-sdks#julia
 ```julia
 using K256
 
-# Decode priority fees from binary payload
-fees = K256.decode_priority_fees(payload)
+# Decode fee market from binary payload
+fees = K256.decode_fee_market(payload)
 if fees !== nothing
     println("Slot: $(fees.slot)")
     println("Recommended fee: $(fees.recommended) microlamports")
     println("Network state: $(fees.state)")
+    println("Accounts: $(length(fees.accounts))")
 end
 
 # Decode blockhash
@@ -54,7 +55,7 @@ K256
 ├── NetworkState      # Network state constants
 ├── Types
 │   ├── PoolUpdate    # Pool state update
-│   ├── PriorityFees  # Priority fees
+│   ├── FeeMarket     # Fee market
 │   ├── Blockhash     # Recent blockhash
 │   ├── Quote         # Swap quote
 │   └── ...
@@ -66,7 +67,7 @@ K256
 
 ### Decoding
 
-- `decode_priority_fees(data)` - Decode priority fees
+- `decode_fee_market(data)` - Decode fee market
 - `decode_blockhash(data)` - Decode blockhash
 - `decode_pool_update(data)` - Decode single pool update
 - `decode_pool_update_batch(data)` - Decode batch of pool updates

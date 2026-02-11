@@ -153,8 +153,8 @@ export interface K256WebSocketClientConfig {
   onPoolUpdate?: (update: PoolUpdateMessage) => void;
   /** Called on batched pool updates (for efficiency) */
   onPoolUpdateBatch?: (updates: PoolUpdateMessage[]) => void;
-  /** Called on priority fees update */
-  onPriorityFees?: (data: DecodedMessage & { type: 'priority_fees' }) => void;
+  /** Called on fee market update (per-writable-account fees) */
+  onFeeMarket?: (data: DecodedMessage & { type: 'fee_market' }) => void;
   /** Called on blockhash update */
   onBlockhash?: (data: DecodedMessage & { type: 'blockhash' }) => void;
   /** Called on quote update */
@@ -225,7 +225,7 @@ export class K256WebSocketClient {
   private ws: WebSocket | null = null;
   private config: Required<Omit<K256WebSocketClientConfig, 
     'onStateChange' | 'onConnect' | 'onDisconnect' | 'onReconnecting' | 'onError' |
-    'onSubscribed' | 'onPoolUpdate' | 'onPoolUpdateBatch' | 'onPriorityFees' | 
+    'onSubscribed' | 'onPoolUpdate' | 'onPoolUpdateBatch' | 'onFeeMarket' |
     'onBlockhash' | 'onQuote' | 'onQuoteSubscribed' | 'onHeartbeat' | 'onPong' | 
     'onMessage' | 'onRawMessage'
   >> & K256WebSocketClientConfig;
@@ -536,8 +536,8 @@ export class K256WebSocketClient {
         case 'pool_update':
           this.config.onPoolUpdate?.(decoded as PoolUpdateMessage);
           break;
-        case 'priority_fees':
-          this.config.onPriorityFees?.(decoded as DecodedMessage & { type: 'priority_fees' });
+        case 'fee_market':
+          this.config.onFeeMarket?.(decoded as DecodedMessage & { type: 'fee_market' });
           break;
         case 'blockhash':
           this.config.onBlockhash?.(decoded as DecodedMessage & { type: 'blockhash' });

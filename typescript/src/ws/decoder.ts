@@ -8,7 +8,7 @@
  */
 
 import { base58Encode } from '../utils/base58';
-import { MessageType, type DecodedMessage, type PoolUpdateMessage } from './types';
+import { MessageType, type DecodedMessage, type PoolUpdateMessage, type FeeMarketMessage } from './types';
 
 /**
  * Decode a binary WebSocket message from K2
@@ -69,84 +69,60 @@ export function decodeMessage(data: ArrayBuffer): DecodedMessage | null {
     }
 
     case MessageType.PriorityFees: {
-      // PriorityFeesWire bincode layout:
-      // Offset 0:  slot: u64
-      // Offset 8:  timestamp_ms: u64
-      // Offset 16: recommended: u64
-      // Offset 24: state: u8 (0=low, 1=normal, 2=high, 3=extreme)
-      // Offset 25: is_stale: bool
-      // Offset 26: swap_p50: u64
-      // Offset 34: swap_p75: u64
-      // Offset 42: swap_p90: u64
-      // Offset 50: swap_p99: u64
-      // Offset 58: swap_samples: u32
-      // Offset 62: landing_p50_fee: u64
-      // Offset 70: landing_p75_fee: u64
-      // Offset 78: landing_p90_fee: u64
-      // Offset 86: landing_p99_fee: u64
-      // Offset 94: top_10_fee: u64
-      // Offset 102: top_25_fee: u64
-      // Offset 110: spike_detected: bool
-      // Offset 111: spike_fee: u64
-      // Total: 119 bytes
-      if (payload.byteLength < 24) return null;
+      // FeeMarketWire bincode layout (per-writable-account model):
+      // Header (42 bytes):
+      //   Offset 0:  slot: u64 (8 bytes)
+      //   Offset 8:  timestamp_ms: u64 (8 bytes)
+      //   Offset 16: recommended: u64 (8 bytes)
+      //   Offset 24: state: u8 (1 byte)
+      //   Offset 25: is_stale: bool (1 byte)
+      //   Offset 26: block_utilization_pct: f32 (4 bytes)
+      //   Offset 30: blocks_in_window: u32 (4 bytes)
+      //   Offset 34: account_count: u64 (8 bytes) [bincode Vec length]
+      // Per account (92 bytes each):
+      //   pubkey: [u8; 32], total_txs: u32, active_slots: u32,
+      //   cu_consumed: u64, utilization_pct: f32,
+      //   p25: u64, p50: u64, p75: u64, p90: u64, min_nonzero_price: u64
+      if (payload.byteLength < 42) return null;
 
       const slot = Number(payloadView.getBigUint64(0, true));
       const timestampMs = Number(payloadView.getBigUint64(8, true));
       const recommended = Number(payloadView.getBigUint64(16, true));
-      const state = payload.byteLength > 24 ? payloadView.getUint8(24) : 1;
-      const isStale = payload.byteLength > 25 ? payloadView.getUint8(25) !== 0 : false;
+      const state = payloadView.getUint8(24);
+      const isStale = payloadView.getUint8(25) !== 0;
+      const blockUtilizationPct = payloadView.getFloat32(26, true);
+      const blocksInWindow = payloadView.getUint32(30, true);
+      const accountCount = Number(payloadView.getBigUint64(34, true));
 
-      // Swap percentiles (offset 26-57)
-      let swapP50 = 0, swapP75 = 0, swapP90 = 0, swapP99 = 0;
-      if (payload.byteLength >= 58) {
-        swapP50 = Number(payloadView.getBigUint64(26, true));
-        swapP75 = Number(payloadView.getBigUint64(34, true));
-        swapP90 = Number(payloadView.getBigUint64(42, true));
-        swapP99 = Number(payloadView.getBigUint64(50, true));
-      }
+      const accounts: FeeMarketMessage['data']['accounts'] = [];
+      let offset = 42;
+      for (let i = 0; i < accountCount && offset + 92 <= payload.byteLength; i++) {
+        const pubkeyBytes = new Uint8Array(payload, offset, 32);
+        const pubkey = base58Encode(pubkeyBytes);
+        const totalTxs = payloadView.getUint32(offset + 32, true);
+        const activeSlots = payloadView.getUint32(offset + 36, true);
+        const cuConsumed = Number(payloadView.getBigUint64(offset + 40, true));
+        const utilizationPct = payloadView.getFloat32(offset + 48, true);
+        const p25 = Number(payloadView.getBigUint64(offset + 52, true));
+        const p50 = Number(payloadView.getBigUint64(offset + 60, true));
+        const p75 = Number(payloadView.getBigUint64(offset + 68, true));
+        const p90 = Number(payloadView.getBigUint64(offset + 76, true));
+        const minNonzeroPrice = Number(payloadView.getBigUint64(offset + 84, true));
 
-      // Extended fields (offset 58+)
-      let swapSamples = 0;
-      let landingP50Fee = 0, landingP75Fee = 0, landingP90Fee = 0, landingP99Fee = 0;
-      let top10Fee = 0, top25Fee = 0;
-      let spikeDetected = false, spikeFee = 0;
-
-      if (payload.byteLength >= 119) {
-        swapSamples = payloadView.getUint32(58, true);
-        landingP50Fee = Number(payloadView.getBigUint64(62, true));
-        landingP75Fee = Number(payloadView.getBigUint64(70, true));
-        landingP90Fee = Number(payloadView.getBigUint64(78, true));
-        landingP99Fee = Number(payloadView.getBigUint64(86, true));
-        top10Fee = Number(payloadView.getBigUint64(94, true));
-        top25Fee = Number(payloadView.getBigUint64(102, true));
-        spikeDetected = payloadView.getUint8(110) !== 0;
-        spikeFee = Number(payloadView.getBigUint64(111, true));
+        accounts.push({
+          pubkey, totalTxs, activeSlots, cuConsumed, utilizationPct,
+          p25, p50, p75, p90, minNonzeroPrice,
+        });
+        offset += 92;
       }
 
       return {
-        type: 'priority_fees',
+        type: 'fee_market',
         data: {
-          slot,
-          timestampMs,
-          recommended,
-          state,
-          isStale,
-          swapP50,
-          swapP75,
-          swapP90,
-          swapP99,
-          swapSamples,
-          landingP50Fee,
-          landingP75Fee,
-          landingP90Fee,
-          landingP99Fee,
-          top10Fee,
-          top25Fee,
-          spikeDetected,
-          spikeFee,
+          slot, timestampMs, recommended, state, isStale,
+          blockUtilizationPct, blocksInWindow, accounts,
         },
-      };
+      } as FeeMarketMessage;
     }
 
     case MessageType.Blockhash: {

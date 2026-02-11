@@ -44,9 +44,10 @@ const client = new K256WebSocketClient({
     console.log(`Protocol: ${update.data.protocol}`);
     console.log(`Balances: ${update.data.tokenBalances.join(', ')}`);
   },
-  onPriorityFees: (fees) => {
+  onFeeMarket: (fees) => {
     console.log(`Recommended fee: ${fees.data.recommended} microlamports`);
     console.log(`Network state: ${fees.data.state}`);
+    console.log(`Top accounts: ${fees.data.accounts.length}`);
   },
   onBlockhash: (bh) => {
     console.log(`Blockhash: ${bh.data.blockhash}`);
@@ -79,8 +80,8 @@ All SDKs provide:
 
 | Module | Description |
 |--------|-------------|
-| `ws/` | WebSocket client - real-time pool updates, priority fees, blockhash, streaming quotes |
-| `types/` | Type definitions - Pool, Token, Quote, PriorityFees, etc. |
+| `ws/` | WebSocket client - real-time pool updates, fee market, blockhash, streaming quotes |
+| `types/` | Type definitions - Pool, Token, Quote, FeeMarket, AccountFee, etc. |
 | `utils/` | Utilities - Base58 encoding, address validation |
 | `api/` | REST API client (planned) - Quote, swap instructions, token search |
 
@@ -91,7 +92,7 @@ Subscribe to these real-time data channels:
 | Channel | Description | Update Frequency |
 |---------|-------------|------------------|
 | `pools` | DEX pool state changes (balances, prices) | Real-time |
-| `priority_fees` | Solana priority fee estimates | ~400ms |
+| `priority_fees` | Per-writable-account fee market data | ~400ms |
 | `blockhash` | Recent blockhash for transactions | ~400ms |
 
 ## Architecture

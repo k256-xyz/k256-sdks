@@ -8,9 +8,9 @@
  * @code
  * #include <k256/k256.hpp>
  *
- * // Decode priority fees
- * auto fees = k256::decode_priority_fees(payload);
- * std::cout << "Recommended fee: " << fees.recommended << std::endl;
+ * // Decode fee market (per-writable-account fees)
+ * auto fees = k256::decode_fee_market(payload, len);
+ * std::cout << "Recommended fee: " << fees->recommended << std::endl;
  * @endcode
  */
 

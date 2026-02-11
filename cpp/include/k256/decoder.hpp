@@ -53,38 +53,56 @@ inline int32_t read_i32_le(const uint8_t* data) {
 }
 
 /**
- * @brief Decode priority fees from binary payload
+ * @brief Read a little-endian float32 from buffer
+ */
+inline float read_f32_le(const uint8_t* data) {
+    uint32_t bits = read_u32_le(data);
+    float result;
+    std::memcpy(&result, &bits, sizeof(float));
+    return result;
+}
+
+/**
+ * @brief Decode fee market from binary payload (per-writable-account model)
  *
- * Wire format: 119 bytes, little-endian
+ * Variable-length wire format: 42-byte header + N × 92 bytes per account.
  *
  * @param data Pointer to payload (without message type byte)
  * @param len Length of payload
- * @return Decoded PriorityFees or std::nullopt if payload too short
+ * @return Decoded FeeMarket or std::nullopt if payload too short
  */
-inline std::optional<PriorityFees> decode_priority_fees(const uint8_t* data, size_t len) {
-    if (len < 119) return std::nullopt;
+inline std::optional<FeeMarket> decode_fee_market(const uint8_t* data, size_t len) {
+    if (len < 42) return std::nullopt;
 
-    PriorityFees fees;
-    fees.slot = read_u64_le(data + 0);
-    fees.timestamp_ms = read_u64_le(data + 8);
-    fees.recommended = read_u64_le(data + 16);
-    fees.state = static_cast<NetworkState>(data[24]);
-    fees.is_stale = data[25] != 0;
-    fees.swap_p50 = read_u64_le(data + 26);
-    fees.swap_p75 = read_u64_le(data + 34);
-    fees.swap_p90 = read_u64_le(data + 42);
-    fees.swap_p99 = read_u64_le(data + 50);
-    fees.swap_samples = read_u32_le(data + 58);
-    fees.landing_p50_fee = read_u64_le(data + 62);
-    fees.landing_p75_fee = read_u64_le(data + 70);
-    fees.landing_p90_fee = read_u64_le(data + 78);
-    fees.landing_p99_fee = read_u64_le(data + 86);
-    fees.top_10_fee = read_u64_le(data + 94);
-    fees.top_25_fee = read_u64_le(data + 102);
-    fees.spike_detected = data[110] != 0;
-    fees.spike_fee = read_u64_le(data + 111);
+    FeeMarket fm;
+    fm.slot = read_u64_le(data + 0);
+    fm.timestamp_ms = read_u64_le(data + 8);
+    fm.recommended = read_u64_le(data + 16);
+    fm.state = static_cast<NetworkState>(data[24]);
+    fm.is_stale = data[25] != 0;
+    fm.block_utilization_pct = read_f32_le(data + 26);
+    fm.blocks_in_window = read_u32_le(data + 30);
+    uint64_t account_count = read_u64_le(data + 34);
 
-    return fees;
+    size_t offset = 42;
+    fm.accounts.reserve(account_count);
+    for (uint64_t i = 0; i < account_count && offset + 92 <= len; ++i) {
+        AccountFee acct;
+        acct.pubkey = base58_encode(data + offset, 32);
+        acct.total_txs = read_u32_le(data + offset + 32);
+        acct.active_slots = read_u32_le(data + offset + 36);
+        acct.cu_consumed = read_u64_le(data + offset + 40);
+        acct.utilization_pct = read_f32_le(data + offset + 48);
+        acct.p25 = read_u64_le(data + offset + 52);
+        acct.p50 = read_u64_le(data + offset + 60);
+        acct.p75 = read_u64_le(data + offset + 68);
+        acct.p90 = read_u64_le(data + offset + 76);
+        acct.min_nonzero_price = read_u64_le(data + offset + 84);
+        fm.accounts.push_back(std::move(acct));
+        offset += 92;
+    }
+
+    return fm;
 }
 
 /**

@@ -10,8 +10,8 @@ Connect any application to Solana's liquidity ecosystem. One API. All venues. Fu
 ```julia
 using K256
 
-# Decode priority fees
-fees = K256.decode_priority_fees(payload)
+# Decode fee market (per-writable-account fees)
+fees = K256.decode_fee_market(payload)
 println("Recommended fee: \$(fees.recommended) microlamports")
 
 # Decode blockhash
@@ -28,8 +28,8 @@ end
 module K256
 
 export MessageType, NetworkState
-export OrderLevel, PoolUpdate, PriorityFees, Blockhash, Quote, Heartbeat, Token
-export decode_priority_fees, decode_blockhash, decode_pool_update, decode_pool_update_batch, decode_quote
+export OrderLevel, PoolUpdate, AccountFee, FeeMarket, Blockhash, Quote, Heartbeat, Token
+export decode_fee_market, decode_blockhash, decode_pool_update, decode_pool_update_batch, decode_quote
 export base58_encode, base58_decode, is_valid_pubkey
 
 const VERSION = "0.1.0"

@@ -59,9 +59,9 @@ type WebSocketClient struct {
 	reconnectDelay   time.Duration
 	lastSubscription *SubscribeRequest
 
-	onPoolUpdate    func(*PoolUpdate)
-	onPriorityFees  func(*PriorityFees)
-	onBlockhash     func(*Blockhash)
+	onPoolUpdate func(*PoolUpdate)
+	onFeeMarket  func(*FeeMarket)
+	onBlockhash  func(*Blockhash)
 	onQuote         func(*Quote)
 	onHeartbeat     func(*Heartbeat)
 	onError         func(error)
@@ -92,9 +92,9 @@ func (c *WebSocketClient) OnPoolUpdate(callback func(*PoolUpdate)) {
 	c.onPoolUpdate = callback
 }
 
-// OnPriorityFees registers a callback for priority fee updates.
-func (c *WebSocketClient) OnPriorityFees(callback func(*PriorityFees)) {
-	c.onPriorityFees = callback
+// OnFeeMarket registers a callback for fee market updates.
+func (c *WebSocketClient) OnFeeMarket(callback func(*FeeMarket)) {
+	c.onFeeMarket = callback
 }
 
 // OnBlockhash registers a callback for blockhash updates.
@@ -274,13 +274,13 @@ func (c *WebSocketClient) handleBinaryMessage(data []byte) {
 		}
 
 	case MessageTypePriorityFees:
-		if c.onPriorityFees != nil {
-			fees, err := DecodePriorityFees(payload)
+		if c.onFeeMarket != nil {
+			fees, err := DecodeFeeMarket(payload)
 			if err != nil {
-				log.Printf("Error decoding priority fees: %v", err)
+				log.Printf("Error decoding fee market: %v", err)
 				return
 			}
-			c.onPriorityFees(fees)
+			c.onFeeMarket(fees)
 		}
 
 	case MessageTypeBlockhash:

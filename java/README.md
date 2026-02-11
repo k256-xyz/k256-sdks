@@ -41,7 +41,7 @@ public class Example {
                 System.out.printf("Pool %s: slot=%d%n",
                     update.poolAddress(), update.slot());
             })
-            .onPriorityFees(fees -> {
+            .onFeeMarket(fees -> {
                 System.out.printf("Recommended fee: %d microlamports%n",
                     fees.recommended());
             })
@@ -70,7 +70,7 @@ xyz.k256.sdk/
 │   └── MessageDecoder        # Binary message decoder
 ├── types/
 │   ├── PoolUpdate           # Pool state update
-│   ├── PriorityFees         # Priority fee recommendations
+│   ├── FeeMarket            # Per-writable-account fee market
 │   ├── Blockhash            # Recent blockhash
 │   ├── Quote                # Swap quote
 │   └── ...

@@ -44,7 +44,7 @@ export type {
   MessageTypeValue,
   DecodedMessage,
   PoolUpdateMessage,
-  PriorityFeesMessage,
+  FeeMarketMessage,
   BlockhashMessage,
   QuoteMessage,
   HeartbeatMessage,

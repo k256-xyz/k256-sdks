@@ -10,7 +10,7 @@ module K256
   #   client = K256::Client.new(api_key: ENV['K256_API_KEY'])
   #
   #   client.on_pool_update { |update| puts update.pool_address }
-  #   client.on_priority_fees { |fees| puts fees.recommended }
+  #   client.on_fee_market { |fees| puts fees.recommended }
   #
   #   client.connect
   #   client.subscribe(channels: ['pools', 'priority_fees', 'blockhash'])
@@ -54,11 +54,11 @@ module K256
       @callbacks[:pool_update] = block
     end
 
-    # Register a callback for priority fee updates.
+    # Register a callback for fee market updates.
     #
-    # @yield [PriorityFees] Priority fees
-    def on_priority_fees(&block)
-      @callbacks[:priority_fees] = block
+    # @yield [FeeMarket] Fee market data
+    def on_fee_market(&block)
+      @callbacks[:fee_market] = block
     end
 
     # Register a callback for blockhash updates.
@@ -198,9 +198,9 @@ module K256
           updates.each { |u| @callbacks[:pool_update].call(u) }
         end
       when MessageType::PRIORITY_FEES
-        if @callbacks[:priority_fees]
-          fees = Decoder.decode_priority_fees(payload)
-          @callbacks[:priority_fees].call(fees) if fees
+        if @callbacks[:fee_market]
+          fees = Decoder.decode_fee_market(payload)
+          @callbacks[:fee_market].call(fees) if fees
         end
       when MessageType::BLOCKHASH
         if @callbacks[:blockhash]

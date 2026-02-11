@@ -30,11 +30,12 @@ https://github.com/k256-xyz/k256-sdks.git
 ```swift
 import K256SDK
 
-// Decode priority fees from binary payload
-if let fees = K256Decoder.decodePriorityFees(payload) {
+// Decode fee market from binary payload
+if let fees = K256Decoder.decodeFeeMarket(payload) {
     print("Slot: \(fees.slot)")
     print("Recommended fee: \(fees.recommended) microlamports")
     print("Network state: \(fees.state)")
+    print("Accounts: \(fees.accounts.count)")
 }
 
 // Decode blockhash
@@ -60,7 +61,7 @@ K256/
 │   ├── MessageType.swift   # Message type enum
 │   ├── NetworkState.swift  # Network state enum
 │   ├── PoolUpdate.swift    # Pool state update
-│   ├── PriorityFees.swift  # Priority fees struct
+│   ├── FeeMarket.swift     # Fee market struct
 │   ├── Blockhash.swift     # Recent blockhash struct
 │   ├── Quote.swift         # Swap quote struct
 │   ├── OrderLevel.swift    # Order level struct

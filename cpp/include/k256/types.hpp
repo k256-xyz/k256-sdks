@@ -89,29 +89,37 @@ struct PoolUpdate {
 };
 
 /**
- * @brief Priority fee recommendations from K256
+ * @brief Per-writable-account fee data
  *
- * Wire format: 119 bytes, little-endian
+ * Part of the variable-length FeeMarket wire format (92 bytes per account).
  */
-struct PriorityFees {
-    uint64_t slot;             ///< Current Solana slot (offset 0)
-    uint64_t timestamp_ms;     ///< Unix timestamp in milliseconds (offset 8)
-    uint64_t recommended;      ///< Recommended fee in microlamports (offset 16)
-    NetworkState state;        ///< Network congestion state (offset 24)
-    bool is_stale;             ///< Whether data may be stale (offset 25)
-    uint64_t swap_p50;         ///< 50th percentile swap fee (offset 26)
-    uint64_t swap_p75;         ///< 75th percentile swap fee (offset 34)
-    uint64_t swap_p90;         ///< 90th percentile swap fee (offset 42)
-    uint64_t swap_p99;         ///< 99th percentile swap fee (offset 50)
-    uint32_t swap_samples;     ///< Number of samples used (offset 58)
-    uint64_t landing_p50_fee;  ///< Fee to land with 50% probability (offset 62)
-    uint64_t landing_p75_fee;  ///< Fee to land with 75% probability (offset 70)
-    uint64_t landing_p90_fee;  ///< Fee to land with 90% probability (offset 78)
-    uint64_t landing_p99_fee;  ///< Fee to land with 99% probability (offset 86)
-    uint64_t top_10_fee;       ///< Fee at top 10% tier (offset 94)
-    uint64_t top_25_fee;       ///< Fee at top 25% tier (offset 102)
-    bool spike_detected;       ///< True if fee spike detected (offset 110)
-    uint64_t spike_fee;        ///< Fee during spike condition (offset 111)
+struct AccountFee {
+    std::string pubkey;          ///< Account public key (Base58)
+    uint32_t total_txs;          ///< Total transactions touching this account
+    uint32_t active_slots;       ///< Active slots for this account
+    uint64_t cu_consumed;        ///< Total CU consumed
+    float utilization_pct;       ///< Utilization percentage (0-100) of 12M CU limit
+    uint64_t p25;                ///< 25th percentile fee (microlamports/CU)
+    uint64_t p50;                ///< 50th percentile fee
+    uint64_t p75;                ///< 75th percentile fee
+    uint64_t p90;                ///< 90th percentile fee
+    uint64_t min_nonzero_price;  ///< Minimum non-zero fee observed
+};
+
+/**
+ * @brief Per-writable-account fee market data from K256
+ *
+ * Variable-length wire format: 42-byte header + N × 92 bytes per account.
+ */
+struct FeeMarket {
+    uint64_t slot;                    ///< Current Solana slot
+    uint64_t timestamp_ms;            ///< Unix timestamp in milliseconds
+    uint64_t recommended;             ///< Recommended fee in microlamports/CU
+    NetworkState state;               ///< Network congestion state
+    bool is_stale;                    ///< Whether data may be stale
+    float block_utilization_pct;      ///< Block utilization percentage (0-100)
+    uint32_t blocks_in_window;        ///< Number of blocks in observation window
+    std::vector<AccountFee> accounts; ///< Per-writable-account fee data
 };
 
 /**

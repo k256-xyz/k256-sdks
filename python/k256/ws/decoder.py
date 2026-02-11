@@ -6,7 +6,8 @@ from typing import Union
 
 from k256.types import (
     PoolUpdate,
-    PriorityFees,
+    FeeMarket,
+    AccountFee,
     Blockhash,
     Quote,
     Heartbeat,
@@ -20,7 +21,7 @@ from k256.utils import base58_encode
 def decode_message(
     msg_type: int,
     payload: bytes,
-) -> Union[PoolUpdate, PriorityFees, Blockhash, Quote, Heartbeat, list[PoolUpdate], str, None]:
+) -> Union[PoolUpdate, FeeMarket, Blockhash, Quote, Heartbeat, list[PoolUpdate], str, None]:
     """Decode a binary WebSocket message.
     
     Args:
@@ -38,7 +39,7 @@ def decode_message(
     elif msg_type == MessageType.POOL_UPDATE_BATCH:
         return _decode_pool_update_batch(payload)
     elif msg_type == MessageType.PRIORITY_FEES:
-        return _decode_priority_fees(payload)
+        return _decode_fee_market(payload)
     elif msg_type == MessageType.BLOCKHASH:
         return _decode_blockhash(payload)
     elif msg_type == MessageType.QUOTE:
@@ -170,30 +171,59 @@ def _decode_pool_update_batch(data: bytes) -> list[PoolUpdate]:
     return updates
 
 
-def _decode_priority_fees(data: bytes) -> PriorityFees:
-    """Decode priority fees from bincode format (119 bytes)."""
-    if len(data) < 119:
-        raise ValueError(f"PriorityFees payload too short: {len(data)} < 119")
-    
-    return PriorityFees(
-        slot=struct.unpack_from("<Q", data, 0)[0],
-        timestamp_ms=struct.unpack_from("<Q", data, 8)[0],
-        recommended=struct.unpack_from("<Q", data, 16)[0],
-        state=NetworkState(data[24]),
-        is_stale=bool(data[25]),
-        swap_p50=struct.unpack_from("<Q", data, 26)[0],
-        swap_p75=struct.unpack_from("<Q", data, 34)[0],
-        swap_p90=struct.unpack_from("<Q", data, 42)[0],
-        swap_p99=struct.unpack_from("<Q", data, 50)[0],
-        swap_samples=struct.unpack_from("<I", data, 58)[0],
-        landing_p50_fee=struct.unpack_from("<Q", data, 62)[0],
-        landing_p75_fee=struct.unpack_from("<Q", data, 70)[0],
-        landing_p90_fee=struct.unpack_from("<Q", data, 78)[0],
-        landing_p99_fee=struct.unpack_from("<Q", data, 86)[0],
-        top_10_fee=struct.unpack_from("<Q", data, 94)[0],
-        top_25_fee=struct.unpack_from("<Q", data, 102)[0],
-        spike_detected=bool(data[110]),
-        spike_fee=struct.unpack_from("<Q", data, 111)[0],
+def _decode_fee_market(data: bytes) -> FeeMarket:
+    """Decode fee market from bincode format (variable length).
+
+    Header: 42 bytes. Per account: 92 bytes each.
+    """
+    if len(data) < 42:
+        raise ValueError(f"FeeMarket payload too short: {len(data)} < 42")
+
+    slot = struct.unpack_from("<Q", data, 0)[0]
+    timestamp_ms = struct.unpack_from("<Q", data, 8)[0]
+    recommended = struct.unpack_from("<Q", data, 16)[0]
+    state = NetworkState(data[24])
+    is_stale = bool(data[25])
+    block_utilization_pct = struct.unpack_from("<f", data, 26)[0]
+    blocks_in_window = struct.unpack_from("<I", data, 30)[0]
+    account_count = struct.unpack_from("<Q", data, 34)[0]
+
+    accounts = []
+    offset = 42
+    for _ in range(account_count):
+        if offset + 92 > len(data):
+            break
+        pubkey = base58_encode(data[offset:offset + 32])
+        total_txs = struct.unpack_from("<I", data, offset + 32)[0]
+        active_slots = struct.unpack_from("<I", data, offset + 36)[0]
+        cu_consumed = struct.unpack_from("<Q", data, offset + 40)[0]
+        utilization_pct = struct.unpack_from("<f", data, offset + 48)[0]
+        p25 = struct.unpack_from("<Q", data, offset + 52)[0]
+        p50 = struct.unpack_from("<Q", data, offset + 60)[0]
+        p75 = struct.unpack_from("<Q", data, offset + 68)[0]
+        p90 = struct.unpack_from("<Q", data, offset + 76)[0]
+        min_nonzero_price = struct.unpack_from("<Q", data, offset + 84)[0]
+
+        accounts.append(AccountFee(
+            pubkey=pubkey,
+            total_txs=total_txs,
+            active_slots=active_slots,
+            cu_consumed=cu_consumed,
+            utilization_pct=utilization_pct,
+            p25=p25, p50=p50, p75=p75, p90=p90,
+            min_nonzero_price=min_nonzero_price,
+        ))
+        offset += 92
+
+    return FeeMarket(
+        slot=slot,
+        timestamp_ms=timestamp_ms,
+        recommended=recommended,
+        state=state,
+        is_stale=is_stale,
+        block_utilization_pct=block_utilization_pct,
+        blocks_in_window=blocks_in_window,
+        accounts=accounts,
     )
 
 

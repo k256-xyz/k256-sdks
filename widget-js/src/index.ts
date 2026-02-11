@@ -3,9 +3,9 @@
  *
  * Drop this script on any page to enable K256 widgets:
  *
- * <script src="https://cdn.k256.xyz/widget.js"></script>
+ * <script src="https://app.k256.xyz/sdk/widget.js"></script>
  * <k256-swap wgt="wgt_xxx"></k256-swap>
- * <k256-pay wgt="wgt_xxx"></k256-pay>
+ * <k256-pay wgt="wgt_xxx" base-url="https://your-host.com"></k256-pay>
  *
  * The widget renders inside an iframe for security isolation.
  * The iframe auto-resizes to fit the widget content.
@@ -44,7 +44,7 @@ class K256WidgetElement extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ["wgt", "theme", "amount", "token", "title"]
+    return ["wgt", "theme", "amount", "token", "title", "base-url"]
   }
 
   connectedCallback() {
@@ -69,6 +69,7 @@ class K256WidgetElement extends HTMLElement {
       amount: this.getAttribute("amount") ? Number(this.getAttribute("amount")) : undefined,
       token: this.getAttribute("token") || undefined,
       title: this.getAttribute("title") || undefined,
+      baseUrl: this.getAttribute("base-url") || undefined,
     }
 
     this.embed = new K256Embed(options)
@@ -102,6 +103,7 @@ class K256WidgetElement extends HTMLElement {
     if (name === "amount") update.amount = newValue ? Number(newValue) : undefined
     if (name === "token") update.token = newValue || undefined
     if (name === "title") update.title = newValue || undefined
+    if (name === "base-url") update.baseUrl = newValue || undefined
     this.embed.update(update)
   }
 }

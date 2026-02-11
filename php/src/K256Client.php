@@ -6,7 +6,7 @@ namespace K256;
 
 use K256\Decoder;
 use K256\MessageType;
-use K256\Types\{Blockhash, Heartbeat, PoolUpdate, PriorityFees, Quote};
+use K256\Types\{Blockhash, FeeMarket, Heartbeat, PoolUpdate, Quote};
 use Ratchet\Client\Connector;
 use Ratchet\Client\WebSocket;
 use React\EventLoop\Loop;
@@ -42,7 +42,7 @@ class K256Client
     /** @var callable|null */
     private $onPoolUpdate = null;
     /** @var callable|null */
-    private $onPriorityFees = null;
+    private $onFeeMarket = null;
     /** @var callable|null */
     private $onBlockhash = null;
     /** @var callable|null */
@@ -80,11 +80,11 @@ class K256Client
     }
 
     /**
-     * Register a callback for priority fee updates.
+     * Register a callback for fee market updates.
      */
-    public function onPriorityFees(callable $callback): void
+    public function onFeeMarket(callable $callback): void
     {
-        $this->onPriorityFees = $callback;
+        $this->onFeeMarket = $callback;
     }
 
     /**
@@ -262,10 +262,10 @@ class K256Client
                 break;
 
             case MessageType::PRIORITY_FEES:
-                if ($this->onPriorityFees !== null) {
-                    $fees = Decoder::decodePriorityFees($payload);
+                if ($this->onFeeMarket !== null) {
+                    $fees = Decoder::decodeFeeMarket($payload);
                     if ($fees !== null) {
-                        ($this->onPriorityFees)($fees);
+                        ($this->onFeeMarket)($fees);
                     }
                 }
                 break;

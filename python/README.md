@@ -30,8 +30,8 @@ async def main():
         print(f"Pool {update.pool_address}: slot={update.slot}")
         print(f"  Balances: {update.token_balances}")
 
-    # Handle priority fees
-    @client.on_priority_fees
+    # Handle fee market
+    @client.on_fee_market
     def handle_fees(fees):
         print(f"Recommended fee: {fees.recommended} microlamports")
         print(f"Network state: {fees.state}")
@@ -76,7 +76,7 @@ k256/
 ├── types/
 │   ├── __init__.py
 │   ├── pool.py          # PoolUpdate
-│   ├── fees.py          # PriorityFees
+│   ├── fees.py          # FeeMarket, AccountFee
 │   ├── blockhash.py     # Blockhash
 │   ├── quote.py         # Quote
 │   ├── token.py         # Token

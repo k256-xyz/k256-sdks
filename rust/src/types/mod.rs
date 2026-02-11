@@ -9,7 +9,7 @@ mod quote;
 mod token;
 
 pub use blockhash::Blockhash;
-pub use fees::{NetworkState, PriorityFees};
+pub use fees::{AccountFee, FeeMarket, NetworkState};
 pub use heartbeat::Heartbeat;
 pub use messages::MessageType;
 pub use pool::{OrderLevel, Pool, PoolUpdate};

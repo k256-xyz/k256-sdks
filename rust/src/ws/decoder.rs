@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use crate::types::{Blockhash, MessageType, NetworkState, OrderLevel, PoolUpdate, PriorityFees};
+use crate::types::{AccountFee, Blockhash, FeeMarket, MessageType, NetworkState, OrderLevel, PoolUpdate};
 use crate::ws::client::DecodedMessage;
 
 /// Decoder error types.
@@ -48,8 +48,8 @@ pub fn decode_message(msg_type: u8, payload: &[u8]) -> Result<Option<DecodedMess
             Ok(Some(DecodedMessage::PoolUpdateBatch(updates)))
         }
         MessageType::PriorityFees => {
-            let fees = decode_priority_fees(payload)?;
-            Ok(Some(DecodedMessage::PriorityFees(fees)))
+            let fees = decode_fee_market(payload)?;
+            Ok(Some(DecodedMessage::FeeMarket(fees)))
         }
         MessageType::Blockhash => {
             let bh = decode_blockhash(payload)?;
@@ -201,44 +201,69 @@ fn decode_pool_update_batch(data: &[u8]) -> Result<Vec<PoolUpdate>, DecodeError>
     Ok(updates)
 }
 
-fn decode_priority_fees(data: &[u8]) -> Result<PriorityFees, DecodeError> {
-    if data.len() < 119 {
+fn decode_fee_market(data: &[u8]) -> Result<FeeMarket, DecodeError> {
+    if data.len() < 42 {
         return Err(DecodeError::PayloadTooShort {
-            expected: 119,
+            expected: 42,
             actual: data.len(),
         });
     }
 
     let mut offset = 0;
 
-    Ok(PriorityFees {
-        slot: read_u64(data, &mut offset)?,
-        timestamp_ms: read_u64(data, &mut offset)?,
-        recommended: read_u64(data, &mut offset)?,
-        state: NetworkState::try_from(data[offset]).map_err(DecodeError::InvalidNetworkState)?,
-        is_stale: {
-            offset += 1;
-            let v = data[offset] != 0;
-            offset += 1;
-            v
-        },
-        swap_p50: read_u64(data, &mut offset)?,
-        swap_p75: read_u64(data, &mut offset)?,
-        swap_p90: read_u64(data, &mut offset)?,
-        swap_p99: read_u64(data, &mut offset)?,
-        swap_samples: read_u32(data, &mut offset)?,
-        landing_p50_fee: read_u64(data, &mut offset)?,
-        landing_p75_fee: read_u64(data, &mut offset)?,
-        landing_p90_fee: read_u64(data, &mut offset)?,
-        landing_p99_fee: read_u64(data, &mut offset)?,
-        top_10_fee: read_u64(data, &mut offset)?,
-        top_25_fee: read_u64(data, &mut offset)?,
-        spike_detected: {
-            let v = data[offset] != 0;
-            offset += 1;
-            v
-        },
-        spike_fee: read_u64(data, &mut offset)?,
+    let slot = read_u64(data, &mut offset)?;
+    let timestamp_ms = read_u64(data, &mut offset)?;
+    let recommended = read_u64(data, &mut offset)?;
+    let state = NetworkState::try_from(data[offset]).map_err(DecodeError::InvalidNetworkState)?;
+    offset += 1;
+    let is_stale = data[offset] != 0;
+    offset += 1;
+    let block_utilization_pct = f32::from_le_bytes(data[offset..offset + 4].try_into().unwrap());
+    offset += 4;
+    let blocks_in_window = read_u32(data, &mut offset)?;
+    let account_count = read_u64(data, &mut offset)?;
+
+    let mut accounts = Vec::with_capacity(account_count as usize);
+    for _ in 0..account_count {
+        if offset + 92 > data.len() {
+            return Err(DecodeError::PayloadTooShort {
+                expected: offset + 92,
+                actual: data.len(),
+            });
+        }
+        let pubkey = bs58::encode(&data[offset..offset + 32]).into_string();
+        offset += 32;
+        let total_txs = read_u32(data, &mut offset)?;
+        let active_slots = read_u32(data, &mut offset)?;
+        let cu_consumed = read_u64(data, &mut offset)?;
+        let utilization_pct = f32::from_le_bytes(data[offset..offset + 4].try_into().unwrap());
+        offset += 4;
+        let p25 = read_u64(data, &mut offset)?;
+        let p50 = read_u64(data, &mut offset)?;
+        let p75 = read_u64(data, &mut offset)?;
+        let p90 = read_u64(data, &mut offset)?;
+        let min_nonzero_price = read_u64(data, &mut offset)?;
+
+        accounts.push(AccountFee {
+            pubkey,
+            total_txs,
+            active_slots,
+            cu_consumed,
+            utilization_pct,
+            p25, p50, p75, p90,
+            min_nonzero_price,
+        });
+    }
+
+    Ok(FeeMarket {
+        slot,
+        timestamp_ms,
+        recommended,
+        state,
+        is_stale,
+        block_utilization_pct,
+        blocks_in_window,
+        accounts,
     })
 }
 

@@ -13,7 +13,8 @@ Example:
 from k256.ws import K256WebSocketClient, decode_message
 from k256.types import (
     PoolUpdate,
-    PriorityFees,
+    AccountFee,
+    FeeMarket,
     NetworkState,
     Blockhash,
     Quote,
@@ -35,7 +36,8 @@ __all__ = [
     "decode_message",
     # Types
     "PoolUpdate",
-    "PriorityFees",
+    "AccountFee",
+    "FeeMarket",
     "NetworkState",
     "Blockhash",
     "Quote",

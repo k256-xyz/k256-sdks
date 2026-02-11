@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
 
-use crate::types::{Blockhash, Heartbeat, PoolUpdate, PriorityFees, Quote};
+use crate::types::{Blockhash, FeeMarket, Heartbeat, PoolUpdate, Quote};
 use crate::ws::decoder::decode_message;
 
 /// Configuration for K256 WebSocket client.
@@ -89,8 +89,8 @@ pub enum DecodedMessage {
     PoolUpdate(PoolUpdate),
     /// Batch of pool updates
     PoolUpdateBatch(Vec<PoolUpdate>),
-    /// Priority fees
-    PriorityFees(PriorityFees),
+    /// Fee market update (per-writable-account)
+    FeeMarket(FeeMarket),
     /// Blockhash
     Blockhash(Blockhash),
     /// Quote
@@ -110,7 +110,7 @@ pub struct K256WebSocketClient {
     config: Config,
     tx: mpsc::Sender<Message>,
     on_pool_update: Callback<PoolUpdate>,
-    on_priority_fees: Callback<PriorityFees>,
+    on_fee_market: Callback<FeeMarket>,
     on_blockhash: Callback<Blockhash>,
     on_quote: Callback<Quote>,
     on_heartbeat: Callback<Heartbeat>,
@@ -125,7 +125,7 @@ impl K256WebSocketClient {
             config,
             tx,
             on_pool_update: Arc::new(RwLock::new(None)),
-            on_priority_fees: Arc::new(RwLock::new(None)),
+            on_fee_market: Arc::new(RwLock::new(None)),
             on_blockhash: Arc::new(RwLock::new(None)),
             on_quote: Arc::new(RwLock::new(None)),
             on_heartbeat: Arc::new(RwLock::new(None)),
@@ -144,14 +144,14 @@ impl K256WebSocketClient {
         });
     }
 
-    /// Register a callback for priority fee updates.
-    pub fn on_priority_fees<F>(&self, callback: F)
+    /// Register a callback for fee market updates.
+    pub fn on_fee_market<F>(&self, callback: F)
     where
-        F: Fn(PriorityFees) + Send + Sync + 'static,
+        F: Fn(FeeMarket) + Send + Sync + 'static,
     {
         let rt = tokio::runtime::Handle::current();
         rt.block_on(async {
-            *self.on_priority_fees.write().await = Some(Box::new(callback));
+            *self.on_fee_market.write().await = Some(Box::new(callback));
         });
     }
 
@@ -209,7 +209,7 @@ impl K256WebSocketClient {
         let (mut write, mut read) = ws_stream.split();
 
         let on_pool_update = self.on_pool_update.clone();
-        let on_priority_fees = self.on_priority_fees.clone();
+        let on_fee_market = self.on_fee_market.clone();
         let on_blockhash = self.on_blockhash.clone();
         let on_quote = self.on_quote.clone();
         let on_heartbeat = self.on_heartbeat.clone();
@@ -242,8 +242,8 @@ impl K256WebSocketClient {
                                             }
                                         }
                                     }
-                                    DecodedMessage::PriorityFees(fees) => {
-                                        if let Some(cb) = on_priority_fees.read().await.as_ref() {
+                                    DecodedMessage::FeeMarket(fees) => {
+                                        if let Some(cb) = on_fee_market.read().await.as_ref() {
                                             cb(fees);
                                         }
                                     }

@@ -21,7 +21,7 @@ import java.util.function.Consumer;
  * K256WebSocketClient client = new K256WebSocketClient.Builder()
  *     .apiKey("your-api-key")
  *     .onPoolUpdate(update -> System.out.println("Pool: " + update.poolAddress()))
- *     .onPriorityFees(fees -> System.out.println("Fee: " + fees.recommended()))
+ *     .onFeeMarket(fees -> System.out.println("Fee: " + fees.recommended()))
  *     .build();
  *
  * client.connect();
@@ -39,7 +39,7 @@ public class K256WebSocketClient extends WebSocketClient {
     private final long reconnectDelayMaxMs;
 
     private Consumer<PoolUpdate> onPoolUpdate;
-    private Consumer<PriorityFees> onPriorityFees;
+    private Consumer<FeeMarket> onFeeMarket;
     private Consumer<Blockhash> onBlockhash;
     private Consumer<Quote> onQuote;
     private Consumer<Heartbeat> onHeartbeat;
@@ -124,9 +124,9 @@ public class K256WebSocketClient extends WebSocketClient {
                 }
             }
             case MessageType.PRIORITY_FEES -> {
-                if (onPriorityFees != null) {
-                    PriorityFees fees = MessageDecoder.decodePriorityFees(payload);
-                    if (fees != null) onPriorityFees.accept(fees);
+                if (onFeeMarket != null) {
+                    FeeMarket fees = MessageDecoder.decodeFeeMarket(payload);
+                    if (fees != null) onFeeMarket.accept(fees);
                 }
             }
             case MessageType.BLOCKHASH -> {
@@ -276,7 +276,7 @@ public class K256WebSocketClient extends WebSocketClient {
         private long reconnectDelayMaxMs = 60000;
 
         private Consumer<PoolUpdate> onPoolUpdate;
-        private Consumer<PriorityFees> onPriorityFees;
+        private Consumer<FeeMarket> onFeeMarket;
         private Consumer<Blockhash> onBlockhash;
         private Consumer<Quote> onQuote;
         private Consumer<Heartbeat> onHeartbeat;
@@ -314,8 +314,8 @@ public class K256WebSocketClient extends WebSocketClient {
             return this;
         }
 
-        public Builder onPriorityFees(Consumer<PriorityFees> callback) {
-            this.onPriorityFees = callback;
+        public Builder onFeeMarket(Consumer<FeeMarket> callback) {
+            this.onFeeMarket = callback;
             return this;
         }
 
@@ -360,7 +360,7 @@ public class K256WebSocketClient extends WebSocketClient {
             );
 
             client.onPoolUpdate = onPoolUpdate;
-            client.onPriorityFees = onPriorityFees;
+            client.onFeeMarket = onFeeMarket;
             client.onBlockhash = onBlockhash;
             client.onQuote = onQuote;
             client.onHeartbeat = onHeartbeat;

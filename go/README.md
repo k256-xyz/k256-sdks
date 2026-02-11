@@ -39,8 +39,8 @@ func main() {
             update.TokenBalances)
     })
 
-    // Handle priority fees
-    ws.OnPriorityFees(func(fees *k256.PriorityFees) {
+    // Handle fee market
+    ws.OnFeeMarket(func(fees *k256.FeeMarket) {
         fmt.Printf("Recommended fee: %d microlamports\n", fees.Recommended)
     })
 
@@ -79,7 +79,7 @@ k256/                   # github.com/k256-xyz/k256-sdks/go
 ├── k256.go             # Main package exports
 ├── client.go           # WebSocket client
 ├── decoder.go          # Binary message decoder
-├── types.go            # Type definitions (PoolUpdate, PriorityFees, etc.)
+├── types.go            # Type definitions (PoolUpdate, FeeMarket, AccountFee, etc.)
 ├── utils.go            # Base58 encoding utilities
 └── examples/
     └── websocket.go    # WebSocket example

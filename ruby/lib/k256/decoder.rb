@@ -4,35 +4,55 @@ module K256
   # Binary message decoder for K256 WebSocket protocol.
   module Decoder
     class << self
-      # Decode priority fees from binary payload.
-      # Wire format: 119 bytes, little-endian.
+      # Decode fee market from binary payload (per-writable-account model).
+      # Variable-length wire format: 42-byte header + N × 92 bytes per account.
       #
       # @param data [String] Binary payload (without message type byte)
-      # @return [PriorityFees, nil] Decoded fees or nil if too short
-      def decode_priority_fees(data)
-        return nil if data.bytesize < 119
+      # @return [FeeMarket, nil] Decoded fee market or nil if too short
+      def decode_fee_market(data)
+        return nil if data.bytesize < 42
 
         bytes = data.bytes
 
-        PriorityFees.new(
-          slot: read_u64_le(bytes, 0),
-          timestamp_ms: read_u64_le(bytes, 8),
-          recommended: read_u64_le(bytes, 16),
-          state: bytes[24],
-          is_stale: bytes[25] != 0,
-          swap_p50: read_u64_le(bytes, 26),
-          swap_p75: read_u64_le(bytes, 34),
-          swap_p90: read_u64_le(bytes, 42),
-          swap_p99: read_u64_le(bytes, 50),
-          swap_samples: read_u32_le(bytes, 58),
-          landing_p50_fee: read_u64_le(bytes, 62),
-          landing_p75_fee: read_u64_le(bytes, 70),
-          landing_p90_fee: read_u64_le(bytes, 78),
-          landing_p99_fee: read_u64_le(bytes, 86),
-          top_10_fee: read_u64_le(bytes, 94),
-          top_25_fee: read_u64_le(bytes, 102),
-          spike_detected: bytes[110] != 0,
-          spike_fee: read_u64_le(bytes, 111)
+        slot = read_u64_le(bytes, 0)
+        timestamp_ms = read_u64_le(bytes, 8)
+        recommended = read_u64_le(bytes, 16)
+        state = bytes[24]
+        is_stale = bytes[25] != 0
+        block_utilization_pct = read_f32_le(bytes, 26)
+        blocks_in_window = read_u32_le(bytes, 30)
+        account_count = read_u64_le(bytes, 34)
+
+        accounts = []
+        offset = 42
+        account_count.times do
+          break if offset + 92 > bytes.length
+          pubkey = Base58.encode(bytes[offset, 32])
+          total_txs = read_u32_le(bytes, offset + 32)
+          active_slots = read_u32_le(bytes, offset + 36)
+          cu_consumed = read_u64_le(bytes, offset + 40)
+          utilization_pct = read_f32_le(bytes, offset + 48)
+          p25 = read_u64_le(bytes, offset + 52)
+          p50 = read_u64_le(bytes, offset + 60)
+          p75 = read_u64_le(bytes, offset + 68)
+          p90 = read_u64_le(bytes, offset + 76)
+          min_nonzero_price = read_u64_le(bytes, offset + 84)
+
+          accounts << AccountFee.new(
+            pubkey: pubkey, total_txs: total_txs, active_slots: active_slots,
+            cu_consumed: cu_consumed, utilization_pct: utilization_pct,
+            p25: p25, p50: p50, p75: p75, p90: p90,
+            min_nonzero_price: min_nonzero_price
+          )
+          offset += 92
+        end
+
+        FeeMarket.new(
+          slot: slot, timestamp_ms: timestamp_ms, recommended: recommended,
+          state: state, is_stale: is_stale,
+          block_utilization_pct: block_utilization_pct,
+          blocks_in_window: blocks_in_window,
+          accounts: accounts
         )
       end
 
@@ -324,6 +344,10 @@ module K256
       def read_i32_le(bytes, offset)
         val = read_u32_le(bytes, offset)
         val >= 0x80000000 ? val - 0x100000000 : val
+      end
+
+      def read_f32_le(bytes, offset)
+        bytes[offset, 4].pack("C*").unpack1("e")
       end
     end
   end

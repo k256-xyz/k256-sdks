@@ -12,44 +12,62 @@ read_u32_le(data::Vector{UInt8}, offset::Int) =
 read_u16_le(data::Vector{UInt8}, offset::Int) = 
     reinterpret(UInt16, data[offset:offset+1])[1]
 
-read_i32_le(data::Vector{UInt8}, offset::Int) = 
+read_i32_le(data::Vector{UInt8}, offset::Int) =
     reinterpret(Int32, data[offset:offset+3])[1]
 
-"""
-    decode_priority_fees(data::Vector{UInt8}) -> Union{PriorityFees, Nothing}
+read_f32_le(data::Vector{UInt8}, offset::Int) =
+    reinterpret(Float32, data[offset:offset+3])[1]
 
-Decode priority fees from binary payload.
-Wire format: 119 bytes, little-endian.
+"""
+    decode_fee_market(data::Vector{UInt8}) -> Union{FeeMarket, Nothing}
+
+Decode fee market from binary payload (per-writable-account model).
+Variable-length wire format: 42-byte header + N × 92 bytes per account.
 
 # Arguments
 - `data`: Binary payload (without message type byte)
 
 # Returns
-- Decoded `PriorityFees` or `nothing` if too short
+- Decoded `FeeMarket` or `nothing` if too short
 """
-function decode_priority_fees(data::Vector{UInt8})::Union{PriorityFees, Nothing}
-    length(data) < 119 && return nothing
-    
+function decode_fee_market(data::Vector{UInt8})::Union{FeeMarket, Nothing}
+    length(data) < 42 && return nothing
+
     # Julia uses 1-based indexing
-    PriorityFees(
-        read_u64_le(data, 1),   # slot (offset 0)
-        read_u64_le(data, 9),   # timestamp_ms (offset 8)
-        read_u64_le(data, 17),  # recommended (offset 16)
-        data[25],               # state (offset 24)
-        data[26] != 0,          # is_stale (offset 25)
-        read_u64_le(data, 27),  # swap_p50 (offset 26)
-        read_u64_le(data, 35),  # swap_p75 (offset 34)
-        read_u64_le(data, 43),  # swap_p90 (offset 42)
-        read_u64_le(data, 51),  # swap_p99 (offset 50)
-        read_u32_le(data, 59),  # swap_samples (offset 58)
-        read_u64_le(data, 63),  # landing_p50_fee (offset 62)
-        read_u64_le(data, 71),  # landing_p75_fee (offset 70)
-        read_u64_le(data, 79),  # landing_p90_fee (offset 78)
-        read_u64_le(data, 87),  # landing_p99_fee (offset 86)
-        read_u64_le(data, 95),  # top_10_fee (offset 94)
-        read_u64_le(data, 103), # top_25_fee (offset 102)
-        data[111] != 0,         # spike_detected (offset 110)
-        read_u64_le(data, 112)  # spike_fee (offset 111)
+    slot = read_u64_le(data, 1)              # offset 0
+    timestamp_ms = read_u64_le(data, 9)      # offset 8
+    recommended = read_u64_le(data, 17)      # offset 16
+    state = data[25]                          # offset 24
+    is_stale = data[26] != 0                  # offset 25
+    block_utilization_pct = read_f32_le(data, 27)  # offset 26
+    blocks_in_window = read_u32_le(data, 31)       # offset 30
+    account_count = Int(read_u64_le(data, 35))     # offset 34
+
+    accounts = AccountFee[]
+    offset = 43  # offset 42 in 1-based
+    for _ in 1:account_count
+        offset + 91 > length(data) && break
+        pubkey = base58_encode(data[offset:offset+31])
+        total_txs = read_u32_le(data, offset + 32)
+        active_slots = read_u32_le(data, offset + 36)
+        cu_consumed = read_u64_le(data, offset + 40)
+        utilization_pct = read_f32_le(data, offset + 48)
+        p25 = read_u64_le(data, offset + 52)
+        p50 = read_u64_le(data, offset + 60)
+        p75 = read_u64_le(data, offset + 68)
+        p90 = read_u64_le(data, offset + 76)
+        min_nonzero_price = read_u64_le(data, offset + 84)
+
+        push!(accounts, AccountFee(
+            pubkey, total_txs, active_slots, cu_consumed, utilization_pct,
+            p25, p50, p75, p90, min_nonzero_price
+        ))
+        offset += 92
+    end
+
+    FeeMarket(
+        slot, timestamp_ms, recommended, state, is_stale,
+        block_utilization_pct, blocks_in_window, accounts
     )
 end
 

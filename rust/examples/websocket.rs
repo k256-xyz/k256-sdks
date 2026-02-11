@@ -37,18 +37,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Handle priority fees
-    client.on_priority_fees(|fees| {
+    // Handle fee market updates
+    client.on_fee_market(|fees| {
         println!(
-            "[Priority Fees] slot={}, recommended={} microlamports",
+            "[Fee Market] slot={}, recommended={} microlamports",
             fees.slot, fees.recommended
         );
-        println!("  State: {:?}, IsStale: {}", fees.state, fees.is_stale);
-        println!(
-            "  Swap percentiles: p50={}, p75={}, p90={}, p99={}",
-            fees.swap_p50, fees.swap_p75, fees.swap_p90, fees.swap_p99
-        );
-        println!("  Samples: {}", fees.swap_samples);
+        println!("  State: {}, IsStale: {}, BlockUtil: {:.1}%", fees.state, fees.is_stale, fees.block_utilization_pct);
+        println!("  Accounts: {}", fees.accounts.len());
+        for acct in &fees.accounts {
+            println!("    {}: p75={}, util={:.1}%", acct.pubkey, acct.p75, acct.utilization_pct);
+        }
     });
 
     // Handle blockhash updates

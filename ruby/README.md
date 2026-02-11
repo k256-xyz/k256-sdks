@@ -32,7 +32,7 @@ client.on_pool_update do |update|
   puts "Pool #{update.pool_address}: slot=#{update.slot}"
 end
 
-client.on_priority_fees do |fees|
+client.on_fee_market do |fees|
   puts "Recommended fee: #{fees.recommended} microlamports"
 end
 
@@ -60,7 +60,7 @@ K256
 ├── Base58          # Base58 encoding utilities
 ├── MessageType     # Message type constants
 ├── PoolUpdate      # Pool state update struct
-├── PriorityFees    # Priority fees struct
+├── FeeMarket       # Fee market struct
 ├── Blockhash       # Blockhash struct
 └── Quote           # Quote struct
 ```

@@ -18,7 +18,7 @@ k256-sdk = "0.1"
 ## Quick Start
 
 ```rust
-use k256_sdk::{K256WebSocketClient, Config, SubscribeRequest, PoolUpdate, PriorityFees};
+use k256_sdk::{K256WebSocketClient, Config, SubscribeRequest, PoolUpdate, FeeMarket};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,8 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  Balances: {:?}", update.token_balances);
     });
 
-    // Handle priority fees
-    client.on_priority_fees(|fees: &PriorityFees| {
+    // Handle fee market
+    client.on_fee_market(|fees: &FeeMarket| {
         println!("Recommended fee: {} microlamports", fees.recommended);
         println!("Network state: {:?}", fees.state);
     });
@@ -80,7 +80,7 @@ k256_sdk/
 ├── types/
 │   ├── mod.rs           # Type re-exports
 │   ├── pool.rs          # PoolUpdate
-│   ├── fees.rs          # PriorityFees
+│   ├── fees.rs          # FeeMarket, AccountFee
 │   ├── blockhash.rs     # Blockhash
 │   ├── quote.rs         # Quote
 │   ├── token.rs         # Token

@@ -16,7 +16,7 @@
  * const client = new K256WebSocketClient({
  *   apiKey: 'your-api-key',
  *   onPoolUpdate: (update) => console.log('Pool:', update.data.poolAddress),
- *   onPriorityFees: (fees) => console.log('Fees:', fees.data.recommended),
+ *   onFeeMarket: (fees) => console.log('Fees:', fees.data.recommended),
  * });
  * 
  * await client.connect();

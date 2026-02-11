@@ -70,7 +70,8 @@ All SDKs use identical type names (only casing follows language conventions):
 | Concept | Name | All Languages |
 |---------|------|---------------|
 | Pool state update | `PoolUpdate` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
-| Priority fees | `PriorityFees` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Per-account fee data | `AccountFee` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
+| Fee market update | `FeeMarket` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
 | Recent blockhash | `Blockhash` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
 | Swap quote | `Quote` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
 | Token metadata | `Token` | TS, Go, Py, Rust, Java, C++, Ruby, PHP, Swift, Julia |
@@ -83,7 +84,8 @@ All SDKs use identical type names (only casing follows language conventions):
 | Wrong | Correct | Reason |
 |-------|---------|--------|
 | `PoolUpdateMessage` | `PoolUpdate` | Redundant suffix |
-| `PriorityFeesData` | `PriorityFees` | Redundant suffix |
+| `FeeMarketData` | `FeeMarket` | Redundant suffix |
+| `PriorityFees` | `FeeMarket` + `AccountFee` | Old name; now per-writable-account model |
 | `QuoteResponse` | `Quote` | "Response" is context-dependent |
 | `TokenInfo` | `Token` | "Info" is vague |
 | `PoolState` | `Pool` | "State" is implementation detail |
@@ -236,32 +238,50 @@ price     u64     Price in base units
 size      u64     Size in base units
 ```
 
-### PriorityFees Payload (bincode)
+### FeeMarket Payload (bincode, per-writable-account model)
 
-Full wire format from K2 (119 bytes):
+Variable-length wire format: 42-byte header + N × 92 bytes per account.
+
+Solana's scheduler limits each writable account to 12M CU per block (`MAX_WRITABLE_ACCOUNT_UNITS`).
+The recommended fee is `max(p75(account) for account in writable_accounts)`.
+
+**Header (42 bytes):**
 
 ```
-Offset  Field              Type    Description
+Offset  Field                   Type    Description
 ──────────────────────────────────────────────────────────────────
-0       slot               u64     Current slot
-8       timestamp_ms       u64     Unix timestamp (ms)
-16      recommended        u64     Recommended fee (microlamports)
-24      state              u8      Network state (0=low, 1=normal, 2=high, 3=extreme)
-25      is_stale           bool    Data staleness flag
-26      swap_p50           u64     50th percentile swap fee (≥50K CU txns)
-34      swap_p75           u64     75th percentile
-42      swap_p90           u64     90th percentile
-50      swap_p99           u64     99th percentile
-58      swap_samples       u32     Number of samples used
-62      landing_p50_fee    u64     Fee to land with 50% probability
-70      landing_p75_fee    u64     Fee to land with 75% probability
-78      landing_p90_fee    u64     Fee to land with 90% probability
-86      landing_p99_fee    u64     Fee to land with 99% probability
-94      top_10_fee         u64     Fee at top 10% tier
-102     top_25_fee         u64     Fee at top 25% tier
-110     spike_detected     bool    True if fee spike detected
-111     spike_fee          u64     Fee during spike condition
+0       slot                    u64     Current slot
+8       timestamp_ms            u64     Unix timestamp (ms)
+16      recommended             u64     Recommended fee (microlamports/CU)
+24      state                   u8      Network state (0=low, 1=normal, 2=high, 3=extreme)
+25      is_stale                bool    Data staleness flag
+26      block_utilization_pct   f32     Block utilization percentage (0-100)
+30      blocks_in_window        u32     Number of blocks in observation window
+34      account_count           u64     Number of accounts (bincode Vec length)
 ```
+
+**Per account (92 bytes each):**
+
+```
+Offset  Field              Type       Description
+──────────────────────────────────────────────────────────────────
++0      pubkey             [u8; 32]   Account public key
++32     total_txs          u32        Total transactions touching this account
++36     active_slots       u32        Slots where this account was active
++40     cu_consumed        u64        Total CU consumed
++48     utilization_pct    f32        Account utilization (0-100) of 12M CU limit
++52     p25                u64        25th percentile fee (microlamports/CU)
++60     p50                u64        50th percentile fee
++68     p75                u64        75th percentile fee
++76     p90                u64        90th percentile fee
++84     min_nonzero_price  u64        Minimum non-zero fee observed
+```
+
+Total payload: `42 + (account_count × 92)` bytes.
+
+> **Note:** The wire message type byte is still `PRIORITY_FEES = 0x05` for backward
+> compatibility with the channel subscription name `"priority_fees"`, but the payload
+> struct is `FeeMarket` containing a vector of `AccountFee`.
 
 ### Blockhash Payload (bincode)
 

@@ -2,33 +2,59 @@ import Foundation
 
 /// Binary message decoder for K256 WebSocket protocol.
 public enum K256Decoder {
-    /// Decode priority fees from binary payload.
-    /// Wire format: 119 bytes, little-endian.
+    /// Decode fee market from binary payload (per-writable-account model).
+    /// Variable-length wire format: 42-byte header + N × 92 bytes per account.
     ///
     /// - Parameter data: Binary payload (without message type byte)
-    /// - Returns: Decoded PriorityFees or nil if too short
-    public static func decodePriorityFees(_ data: Data) -> K256PriorityFees? {
-        guard data.count >= 119 else { return nil }
+    /// - Returns: Decoded FeeMarket or nil if too short
+    public static func decodeFeeMarket(_ data: Data) -> K256FeeMarket? {
+        guard data.count >= 42 else { return nil }
 
-        return K256PriorityFees(
-            slot: readU64LE(data, at: 0),
-            timestampMs: readU64LE(data, at: 8),
-            recommended: readU64LE(data, at: 16),
-            state: K256NetworkState(rawValue: data[24]) ?? .normal,
-            isStale: data[25] != 0,
-            swapP50: readU64LE(data, at: 26),
-            swapP75: readU64LE(data, at: 34),
-            swapP90: readU64LE(data, at: 42),
-            swapP99: readU64LE(data, at: 50),
-            swapSamples: readU32LE(data, at: 58),
-            landingP50Fee: readU64LE(data, at: 62),
-            landingP75Fee: readU64LE(data, at: 70),
-            landingP90Fee: readU64LE(data, at: 78),
-            landingP99Fee: readU64LE(data, at: 86),
-            top10Fee: readU64LE(data, at: 94),
-            top25Fee: readU64LE(data, at: 102),
-            spikeDetected: data[110] != 0,
-            spikeFee: readU64LE(data, at: 111)
+        let slot = readU64LE(data, at: 0)
+        let timestampMs = readU64LE(data, at: 8)
+        let recommended = readU64LE(data, at: 16)
+        let state = K256NetworkState(rawValue: data[24]) ?? .normal
+        let isStale = data[25] != 0
+        let blockUtilizationPct = readF32LE(data, at: 26)
+        let blocksInWindow = readU32LE(data, at: 30)
+        let accountCount = Int(readU64LE(data, at: 34))
+
+        var accounts: [K256AccountFee] = []
+        var offset = 42
+        for _ in 0..<accountCount {
+            guard offset + 92 <= data.count else { break }
+            let pubkey = Base58.encode(data.subdata(in: offset..<(offset + 32)))
+            let totalTxs = readU32LE(data, at: offset + 32)
+            let activeSlots = readU32LE(data, at: offset + 36)
+            let cuConsumed = readU64LE(data, at: offset + 40)
+            let utilizationPct = readF32LE(data, at: offset + 48)
+            let p25 = readU64LE(data, at: offset + 52)
+            let p50 = readU64LE(data, at: offset + 60)
+            let p75 = readU64LE(data, at: offset + 68)
+            let p90 = readU64LE(data, at: offset + 76)
+            let minNonzeroPrice = readU64LE(data, at: offset + 84)
+
+            accounts.append(K256AccountFee(
+                pubkey: pubkey,
+                totalTxs: totalTxs,
+                activeSlots: activeSlots,
+                cuConsumed: cuConsumed,
+                utilizationPct: utilizationPct,
+                p25: p25, p50: p50, p75: p75, p90: p90,
+                minNonzeroPrice: minNonzeroPrice
+            ))
+            offset += 92
+        }
+
+        return K256FeeMarket(
+            slot: slot,
+            timestampMs: timestampMs,
+            recommended: recommended,
+            state: state,
+            isStale: isStale,
+            blockUtilizationPct: blockUtilizationPct,
+            blocksInWindow: blocksInWindow,
+            accounts: accounts
         )
     }
 
@@ -328,5 +354,10 @@ public enum K256Decoder {
         data.withUnsafeBytes { ptr in
             ptr.loadUnaligned(fromByteOffset: offset, as: Int32.self).littleEndian
         }
+    }
+
+    private static func readF32LE(_ data: Data, at offset: Int) -> Float {
+        let bits = readU32LE(data, at: offset)
+        return Float(bitPattern: bits)
     }
 }

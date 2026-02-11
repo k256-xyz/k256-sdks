@@ -21,7 +21,7 @@ composer require k256/sdk
 require 'vendor/autoload.php';
 
 use K256\K256Client;
-use K256\Types\{PoolUpdate, PriorityFees, Blockhash};
+use K256\Types\{PoolUpdate, FeeMarket, Blockhash};
 
 $client = new K256Client(apiKey: $_ENV['K256_API_KEY']);
 
@@ -29,7 +29,7 @@ $client->onPoolUpdate(function (PoolUpdate $update) {
     echo "Pool {$update->poolAddress}: slot={$update->slot}\n";
 });
 
-$client->onPriorityFees(function (PriorityFees $fees) {
+$client->onFeeMarket(function (FeeMarket $fees) {
     echo "Recommended fee: {$fees->recommended} microlamports\n";
 });
 
@@ -54,7 +54,7 @@ K256\
 ├── MessageType       # Message type constants
 ├── Types\
 │   ├── PoolUpdate    # Pool state update
-│   ├── PriorityFees  # Priority fees
+│   ├── FeeMarket     # Fee market
 │   ├── Blockhash     # Recent blockhash
 │   ├── Quote         # Swap quote
 │   └── ...
