@@ -5,6 +5,8 @@
  * See: https://github.com/k256-xyz for protocol documentation
  */
 
+import type { BlockMiniStats, TrendDirection, BlockStats } from '../types';
+
 /**
  * WebSocket message type constants
  * 
@@ -40,6 +42,8 @@ export const MessageType = {
   Heartbeat: 0x0d,
   /** Batched pool updates for high throughput */
   PoolUpdateBatch: 0x0e,
+  /** Block-level statistics (v3) */
+  BlockStats: 0x0f,
   /** Error message (UTF-8 string) */
   Error: 0xff,
 } as const;
@@ -105,7 +109,20 @@ export interface FeeMarketMessage {
       /** Minimum non-zero fee observed */
       minNonzeroPrice: number;
     }[];
+    /** Recent block mini-stats (v3) */
+    recentBlocks: BlockMiniStats[];
+    /** Fee trend direction (v3) */
+    trend: TrendDirection;
   };
+}
+
+/**
+ * Decoded block stats from binary message (v3)
+ */
+export interface BlockStatsMessage {
+  type: 'block_stats';
+  data: BlockStats;
+  receivedAt: number;
 }
 
 /**
@@ -223,6 +240,7 @@ export interface PongMessage {
 export type DecodedMessage =
   | PoolUpdateMessage
   | FeeMarketMessage
+  | BlockStatsMessage
   | BlockhashMessage
   | QuoteMessage
   | HeartbeatMessage

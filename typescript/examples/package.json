@@ -8,7 +8,7 @@
     "example": "tsx websocket.ts"
   },
   "dependencies": {
-    "@k256/sdk": "^0.1.0"
+    "@k256/sdk": "^0.2.0"
   },
   "devDependencies": {
     "tsx": "^4.0.0",

@@ -8,6 +8,7 @@
  */
 
 import { base58Encode } from '../utils/base58';
+import type { BlockMiniStats, TrendDirection } from '../types';
 import { MessageType, type DecodedMessage, type PoolUpdateMessage, type FeeMarketMessage } from './types';
 
 /**
@@ -116,11 +117,33 @@ export function decodeMessage(data: ArrayBuffer): DecodedMessage | null {
         offset += 92;
       }
 
+      // Decode recent_blocks (Vec<BlockMiniStats>) — v3
+      // Guard: need at least 8 bytes for count + 1 byte for trend after
+      const recentBlocksCount = offset + 8 <= payload.byteLength
+        ? Number(payloadView.getBigUint64(offset, true))
+        : 0;
+      offset += 8;
+      const recentBlocks: BlockMiniStats[] = [];
+      for (let i = 0; i < recentBlocksCount && offset + 32 <= payload.byteLength; i++) {
+        const rbSlot = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+        const rbCuConsumed = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+        const rbTxCount = payloadView.getUint32(offset, true); offset += 4;
+        const rbUtilizationPct = payloadView.getFloat32(offset, true); offset += 4;
+        const rbAvgCuPrice = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+        recentBlocks.push({ slot: rbSlot, cuConsumed: rbCuConsumed, txCount: rbTxCount, utilizationPct: rbUtilizationPct, avgCuPrice: rbAvgCuPrice });
+      }
+
+      // Decode trend (u8) — v3
+      const trendByte = offset < payload.byteLength ? payloadView.getUint8(offset) : 2;
+      offset += 1;
+      const trend: TrendDirection = trendByte === 0 ? 'rising' : trendByte === 1 ? 'falling' : 'stable';
+
       return {
         type: 'fee_market',
         data: {
           slot, timestampMs, recommended, state, isStale,
           blockUtilizationPct, blocksInWindow, accounts,
+          recentBlocks, trend,
         },
       } as FeeMarketMessage;
     }
@@ -177,6 +200,35 @@ export function decodeMessage(data: ArrayBuffer): DecodedMessage | null {
         data: {
           timestampMs: Number(payloadView.getBigUint64(0, true)),
         },
+      };
+    }
+
+    case MessageType.BlockStats: {
+      // BlockStats (0x0F) — v3
+      // Layout: slot(u64) + cu_consumed(u64) + execution_cu(u64) + cu_limit(u64) + cu_remaining(u64)
+      //       + utilization_pct(f32) + tx_count(u32) + avg_cu_per_tx(u32) + avg_cu_price(u64)
+      //       + min_cu_price(u64) + max_cu_price(u64) + timestamp_ms(u64)
+      let offset = 0; // payload already has type byte stripped
+      const slot = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const cuConsumed = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const executionCu = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const cuLimit = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const cuRemaining = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const utilizationPct = payloadView.getFloat32(offset, true); offset += 4;
+      const txCount = payloadView.getUint32(offset, true); offset += 4;
+      const avgCuPerTx = payloadView.getUint32(offset, true); offset += 4;
+      const avgCuPrice = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const minCuPrice = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const maxCuPrice = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+      const timestampMs = Number(payloadView.getBigUint64(offset, true)); offset += 8;
+
+      return {
+        type: 'block_stats',
+        data: {
+          slot, cuConsumed, executionCu, cuLimit, cuRemaining, utilizationPct,
+          txCount, avgCuPerTx, avgCuPrice, minCuPrice, maxCuPrice, timestampMs,
+        },
+        receivedAt: Date.now(),
       };
     }
 

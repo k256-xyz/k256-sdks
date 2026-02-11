@@ -107,6 +107,40 @@ export interface RoutePlanStep {
 }
 
 /**
+ * Mini block statistics (compact form used in FeeMarket.recentBlocks)
+ */
+export interface BlockMiniStats {
+  slot: number
+  cuConsumed: number
+  txCount: number
+  utilizationPct: number
+  avgCuPrice: number
+}
+
+/**
+ * Direction of the fee trend
+ */
+export type TrendDirection = 'rising' | 'falling' | 'stable'
+
+/**
+ * Full block-level statistics (standalone message 0x0F)
+ */
+export interface BlockStats {
+  slot: number
+  cuConsumed: number
+  executionCu: number
+  cuLimit: number
+  cuRemaining: number
+  utilizationPct: number
+  txCount: number
+  avgCuPerTx: number
+  avgCuPrice: number
+  minCuPrice: number
+  maxCuPrice: number
+  timestampMs: number
+}
+
+/**
  * Per-writable-account fee data
  *
  * Solana's scheduler limits each writable account to 12M CU per block.
@@ -160,6 +194,10 @@ export interface FeeMarket {
   blocksInWindow: number;
   /** Per-account fee data */
   accounts: AccountFee[];
+  /** Recent block mini-stats (v3) */
+  recentBlocks: BlockMiniStats[];
+  /** Fee trend direction (v3) */
+  trend: TrendDirection;
 }
 
 /**

@@ -24,7 +24,7 @@
  */
 
 import { decodeMessage, decodePoolUpdateBatch } from './decoder';
-import { MessageType, type DecodedMessage, type PoolUpdateMessage } from './types';
+import { MessageType, type DecodedMessage, type PoolUpdateMessage, type BlockStatsMessage } from './types';
 
 /**
  * RFC 6455 WebSocket Close Codes
@@ -131,7 +131,7 @@ export interface K256WebSocketClientConfig {
   pingIntervalMs?: number;
   /** Pong timeout in ms - disconnect if no pong (default: 10000) */
   pongTimeoutMs?: number;
-  /** Heartbeat timeout in ms - warn if no heartbeat (default: 15000) */
+  /** Heartbeat timeout in ms - warn if no heartbeat (default: 45000, K2 sends every 30s) */
   heartbeatTimeoutMs?: number;
   
   // Event callbacks
@@ -155,6 +155,8 @@ export interface K256WebSocketClientConfig {
   onPoolUpdateBatch?: (updates: PoolUpdateMessage[]) => void;
   /** Called on fee market update (per-writable-account fees) */
   onFeeMarket?: (data: DecodedMessage & { type: 'fee_market' }) => void;
+  /** Called on block stats update (v3) */
+  onBlockStats?: (message: BlockStatsMessage) => void;
   /** Called on blockhash update */
   onBlockhash?: (data: DecodedMessage & { type: 'blockhash' }) => void;
   /** Called on quote update */
@@ -225,7 +227,7 @@ export class K256WebSocketClient {
   private ws: WebSocket | null = null;
   private config: Required<Omit<K256WebSocketClientConfig, 
     'onStateChange' | 'onConnect' | 'onDisconnect' | 'onReconnecting' | 'onError' |
-    'onSubscribed' | 'onPoolUpdate' | 'onPoolUpdateBatch' | 'onFeeMarket' |
+    'onSubscribed' | 'onPoolUpdate' | 'onPoolUpdateBatch' | 'onFeeMarket' | 'onBlockStats' |
     'onBlockhash' | 'onQuote' | 'onQuoteSubscribed' | 'onHeartbeat' | 'onPong' | 
     'onMessage' | 'onRawMessage'
   >> & K256WebSocketClientConfig;
@@ -272,7 +274,7 @@ export class K256WebSocketClient {
       maxReconnectAttempts: Infinity,
       pingIntervalMs: 30000,
       pongTimeoutMs: 10000,
-      heartbeatTimeoutMs: 15000,
+      heartbeatTimeoutMs: 45000, // K2 sends heartbeats every 30s; allow 45s before warning
       ...config,
     };
   }
@@ -538,6 +540,9 @@ export class K256WebSocketClient {
           break;
         case 'fee_market':
           this.config.onFeeMarket?.(decoded as DecodedMessage & { type: 'fee_market' });
+          break;
+        case 'block_stats':
+          this.config.onBlockStats?.(decoded as BlockStatsMessage);
           break;
         case 'blockhash':
           this.config.onBlockhash?.(decoded as DecodedMessage & { type: 'blockhash' });
