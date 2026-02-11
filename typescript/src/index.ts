@@ -24,8 +24,11 @@
  * ```
  */
 
-// WebSocket module
+// WebSocket module (K2 data — pools, fees, quotes)
 export * from './ws';
+
+// Leader Schedule WebSocket module (leader schedule, gossip, routing)
+export * from './leader-ws';
 
 // Types module
 export * from './types';

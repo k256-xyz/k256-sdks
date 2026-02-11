@@ -45,6 +45,7 @@
 pub mod types;
 pub mod utils;
 pub mod ws;
+pub mod leader_ws;
 
 // Re-exports
 pub use types::*;

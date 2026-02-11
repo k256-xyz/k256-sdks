@@ -1,6 +1,6 @@
 {
   "name": "@k256/sdk",
-  "version": "0.1.7",
+  "version": "0.2.1",
   "description": "Official TypeScript SDK for K256 - the gateway to Solana's liquidity ecosystem",
   "author": "K256 <support@k256.xyz>",
   "license": "MIT",
@@ -66,6 +66,16 @@
       "require": {
         "types": "./dist/utils/index.d.cts",
         "default": "./dist/utils/index.cjs"
+      }
+    },
+    "./leader-ws": {
+      "import": {
+        "types": "./dist/leader-ws/index.d.ts",
+        "default": "./dist/leader-ws/index.js"
+      },
+      "require": {
+        "types": "./dist/leader-ws/index.d.cts",
+        "default": "./dist/leader-ws/index.cjs"
       }
     }
   },

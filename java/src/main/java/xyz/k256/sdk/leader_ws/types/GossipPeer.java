@@ -1,0 +1,20 @@
+package xyz.k256.sdk.leader_ws.types;
+
+/**
+ * A single gossip network peer with routing-relevant data.
+ */
+public class GossipPeer {
+    public String identity;
+    public String tpuQuic;
+    public String tpuUdp;
+    public String tpuForwardsQuic;
+    public String tpuForwardsUdp;
+    public String tpuVote;
+    public String gossipAddr;
+    public String version;
+    public int shredVersion;
+    public long stake;
+    public int commission;
+    public boolean isDelinquent;
+    public long wallclock;
+}
