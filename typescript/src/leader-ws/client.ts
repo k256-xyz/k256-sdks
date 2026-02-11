@@ -2,8 +2,8 @@
  * Leader Schedule WebSocket Client
  * 
  * Connects to the K256 leader-schedule service via the Gateway.
- * Binary mode by default (bincode protocol, matching K2 pattern).
- * JSON mode opt-in via mode: 'json' (gateway decodes bincode to JSON).
+ * Binary mode by default (wincode protocol, matching K2 pattern).
+ * JSON mode opt-in via mode: 'json' (gateway decodes wincode to JSON).
  * 
  * @example
  * ```typescript
@@ -138,7 +138,8 @@ export class LeaderWebSocketError extends Error {
 /**
  * Leader Schedule WebSocket Client
  * 
- * Connects to the leader-schedule service via the Gateway using JSON mode.
+ * Connects to the leader-schedule service via the Gateway.
+ * Binary mode by default (wincode protocol). JSON mode opt-in via gateway.
  * Automatically subscribes to configured channels on connect/reconnect.
  */
 export class LeaderWebSocketClient {
@@ -205,7 +206,7 @@ export class LeaderWebSocketClient {
             msg.set(bytes, 1);
             this.ws!.send(msg.buffer);
           } else {
-            // JSON mode: send text (gateway decodes bincode to JSON)
+            // JSON mode: send text (gateway decodes wincode to JSON)
             this.ws!.send(JSON.stringify({
               type: 'subscribe',
               channels: this.config.channels,
@@ -219,7 +220,7 @@ export class LeaderWebSocketClient {
 
         this.ws.onmessage = (event) => {
           if (this.config.mode === 'binary' && event.data instanceof ArrayBuffer) {
-            // Binary mode: decode bincode with SDK decoder
+            // Binary mode: decode wincode with SDK decoder
             const decoded = decodeLeaderMessage(event.data);
             if (decoded) {
               this.dispatchMessage(decoded);

@@ -1,8 +1,8 @@
 /**
  * Leader Schedule WebSocket message types and interfaces
  * 
- * The leader-schedule WS uses bincode binary protocol (matching K2 pattern).
- * Wire format: [1-byte tag][bincode payload]
+ * The leader-schedule WS uses wincode binary protocol (matching K2 pattern).
+ * Wire format: [1-byte tag][wincode payload]
  * Every decoded message has:
  * - type: message type name
  * - kind: "snapshot" (full state) | "diff" (merge into snapshot) | "event" (append-only)

@@ -1,10 +1,10 @@
 /**
  * Binary message decoder for Leader Schedule WebSocket protocol
  * 
- * Decodes bincode messages from the leader-schedule server into typed objects.
+ * Decodes wincode messages from the leader-schedule server into typed objects.
  * Matches K2 decoder pattern: manual DataView offset walking, little-endian.
  * 
- * Wire format: [1 byte MessageType][N bytes bincode payload]
+ * Wire format: [1 byte MessageType][N bytes wincode payload]
  */
 
 import { base58Encode } from '../utils/base58';
@@ -32,35 +32,35 @@ export const LeaderMessageTag = {
 /** Mutable offset tracker for sequential reading */
 type Offset = { v: number };
 
-/** Read a bincode u64 (little-endian) */
+/** Read a wincode u64 (little-endian) */
 function readU64(view: DataView, o: Offset): number {
   const val = Number(view.getBigUint64(o.v, true));
   o.v += 8;
   return val;
 }
 
-/** Read a bincode u32 (little-endian) */
+/** Read a wincode u32 (little-endian) */
 function readU32(view: DataView, o: Offset): number {
   const val = view.getUint32(o.v, true);
   o.v += 4;
   return val;
 }
 
-/** Read a bincode u16 (little-endian) */
+/** Read a wincode u16 (little-endian) */
 function readU16(view: DataView, o: Offset): number {
   const val = view.getUint16(o.v, true);
   o.v += 2;
   return val;
 }
 
-/** Read a bincode u8 */
+/** Read a wincode u8 */
 function readU8(view: DataView, o: Offset): number {
   const val = view.getUint8(o.v);
   o.v += 1;
   return val;
 }
 
-/** Read a bincode bool */
+/** Read a wincode bool */
 function readBool(view: DataView, o: Offset): boolean {
   return readU8(view, o) !== 0;
 }
@@ -79,7 +79,7 @@ function readPubkeyBytes(data: ArrayBuffer, o: Offset): Uint8Array {
   return bytes;
 }
 
-/** Read a bincode Vec<u8> as string */
+/** Read a wincode Vec<u8> as string */
 function readVecU8AsString(view: DataView, data: ArrayBuffer, o: Offset): string {
   const len = readU64(view, o);
   const bytes = new Uint8Array(data, o.v, len);
@@ -87,7 +87,7 @@ function readVecU8AsString(view: DataView, data: ArrayBuffer, o: Offset): string
   return new TextDecoder().decode(bytes);
 }
 
-/** Read a bincode Option<SocketAddrWire>: tag + ip[16] + port:u16 + is_ipv4:bool */
+/** Read a wincode Option<SocketAddrWire>: tag + ip[16] + port:u16 + is_ipv4:bool */
 function readOptSocketAddr(view: DataView, o: Offset): string | null {
   const tag = readU8(view, o);
   if (tag === 0) return null;
@@ -101,7 +101,7 @@ function readOptSocketAddr(view: DataView, o: Offset): string | null {
   return `[ipv6]:${port}`;
 }
 
-/** Read a bincode Vec<[u8;32]> as base58 string array */
+/** Read a wincode Vec<[u8;32]> as base58 string array */
 function readPubkeyVec(view: DataView, data: ArrayBuffer, o: Offset): string[] {
   const count = readU64(view, o);
   const keys: string[] = [];
@@ -111,7 +111,7 @@ function readPubkeyVec(view: DataView, data: ArrayBuffer, o: Offset): string[] {
   return keys;
 }
 
-/** Read a single GossipPeer from bincode */
+/** Read a single GossipPeer from wincode */
 function readGossipPeer(view: DataView, data: ArrayBuffer, o: Offset): GossipPeer {
   return {
     identity: readPubkey(data, o),
@@ -134,7 +134,7 @@ function readGossipPeer(view: DataView, data: ArrayBuffer, o: Offset): GossipPee
   };
 }
 
-/** Read a bincode Vec<GossipPeer> */
+/** Read a wincode Vec<GossipPeer> */
 function readGossipPeerVec(view: DataView, data: ArrayBuffer, o: Offset): GossipPeer[] {
   const count = readU64(view, o);
   const peers: GossipPeer[] = [];

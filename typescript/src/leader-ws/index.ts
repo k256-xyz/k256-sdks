@@ -2,7 +2,7 @@
  * Leader Schedule WebSocket module for K256 SDK
  * 
  * Real-time Solana leader schedule, gossip network, and routing data.
- * Uses JSON mode over WebSocket — no binary decoding needed.
+ * Binary mode by default (wincode protocol). JSON mode opt-in via gateway.
  * 
  * @module @k256/sdk/leader-ws
  * 
