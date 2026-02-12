@@ -17,4 +17,14 @@ public class GossipPeer {
     public int commission;
     public boolean isDelinquent;
     public long wallclock;
+    /** ISO 3166 country code (e.g. "US", "DE") */
+    public String countryCode;
+    /** Two-letter continent code (e.g. "NA", "EU") */
+    public String continentCode;
+    /** ASN string (e.g. "AS15169") */
+    public String asn;
+    /** AS organization name (e.g. "Google LLC") */
+    public String asName;
+    /** AS organization domain (e.g. "google.com") */
+    public String asDomain;
 }

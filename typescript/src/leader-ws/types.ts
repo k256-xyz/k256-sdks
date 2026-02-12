@@ -81,7 +81,7 @@ export interface LeaderScheduleMessage {
   };
 }
 
-/** Gossip peer data */
+/** Gossip peer data (field names match REST /gossip/peer/:id for consistency) */
 export interface GossipPeer {
   identity: string;
   tpuQuic: string | null;
@@ -93,13 +93,25 @@ export interface GossipPeer {
   gossipAddr: string | null;
   shredVersion: number;
   version: string;
-  activatedStake: number;
+  /** Activated stake in lamports (matches REST field name "stake") */
+  stake: number;
   commission: number;
   isDelinquent: boolean;
-  votePubkey: string;
+  /** Vote account pubkey (matches REST field name "voteAccount") */
+  voteAccount: string;
   lastVote: number;
   rootSlot: number;
   wallclock: number;
+  /** ISO 3166 country code (e.g. "US", "DE") — from IPinfo Lite MMDB on server */
+  countryCode: string;
+  /** Two-letter continent code (e.g. "NA", "EU") */
+  continentCode: string;
+  /** ASN string (e.g. "AS15169") */
+  asn: string;
+  /** AS organization name (e.g. "Google LLC") */
+  asName: string;
+  /** AS organization domain (e.g. "google.com") */
+  asDomain: string;
 }
 
 /** Full gossip peer list (snapshot — apply gossip_diff to keep current) */

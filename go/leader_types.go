@@ -69,6 +69,11 @@ type GossipPeer struct {
 	Commission      uint8   `json:"commission"`
 	IsDelinquent    bool    `json:"isDelinquent"`
 	Wallclock       uint64  `json:"wallclock"`
+	CountryCode     string  `json:"countryCode"`
+	ContinentCode   string  `json:"continentCode"`
+	ASN             string  `json:"asn"`
+	ASName          string  `json:"asName"`
+	ASDomain        string  `json:"asDomain"`
 }
 
 // GossipSnapshotData is the payload of a gossip_snapshot message.

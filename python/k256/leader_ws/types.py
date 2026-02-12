@@ -55,6 +55,11 @@ class GossipPeer:
     commission: int = 0
     is_delinquent: bool = False
     wallclock: int = 0
+    country_code: str = ""
+    continent_code: str = ""
+    asn: str = ""
+    as_name: str = ""
+    as_domain: str = ""
 
 
 @dataclass

@@ -30,6 +30,11 @@ struct GossipPeer
     commission::UInt8
     is_delinquent::Bool
     wallclock::UInt64
+    country_code::Union{String, Nothing}
+    continent_code::Union{String, Nothing}
+    asn::Union{String, Nothing}
+    as_name::Union{String, Nothing}
+    as_domain::Union{String, Nothing}
 end
 
 """Slot update data (snapshot)."""

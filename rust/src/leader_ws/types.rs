@@ -85,6 +85,21 @@ pub struct GossipPeer {
     #[serde(rename = "isDelinquent")]
     pub is_delinquent: bool,
     pub wallclock: u64,
+    /// ISO 3166 country code (e.g. "US", "DE")
+    #[serde(rename = "countryCode", default)]
+    pub country_code: String,
+    /// Two-letter continent code (e.g. "NA", "EU")
+    #[serde(rename = "continentCode", default)]
+    pub continent_code: String,
+    /// ASN string (e.g. "AS15169")
+    #[serde(default)]
+    pub asn: String,
+    /// AS organization name (e.g. "Google LLC")
+    #[serde(rename = "asName", default)]
+    pub as_name: String,
+    /// AS organization domain (e.g. "google.com")
+    #[serde(rename = "asDomain", default)]
+    pub as_domain: String,
 }
 
 /// Gossip snapshot data.

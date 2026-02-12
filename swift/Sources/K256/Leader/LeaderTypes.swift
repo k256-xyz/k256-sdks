@@ -30,6 +30,16 @@ public struct GossipPeer: Codable {
     public let commission: UInt8
     public let isDelinquent: Bool
     public let wallclock: UInt64
+    /// ISO 3166 country code (e.g. "US", "DE")
+    public let countryCode: String?
+    /// Two-letter continent code (e.g. "NA", "EU")
+    public let continentCode: String?
+    /// ASN string (e.g. "AS15169")
+    public let asn: String?
+    /// AS organization name (e.g. "Google LLC")
+    public let asName: String?
+    /// AS organization domain (e.g. "google.com")
+    public let asDomain: String?
 }
 
 public struct SlotUpdateData: Codable {

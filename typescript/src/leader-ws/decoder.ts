@@ -104,7 +104,7 @@ function readPubkeyVec(view: DataView, data: ArrayBuffer, o: Offset): string[] {
   return keys;
 }
 
-/** Read a single GossipPeer from wincode */
+/** Read a single GossipPeer from wincode (field names match REST /gossip/peer/:id) */
 function readGossipPeer(view: DataView, data: ArrayBuffer, o: Offset): GossipPeer {
   return {
     identity: readPubkey(data, o),
@@ -117,13 +117,19 @@ function readGossipPeer(view: DataView, data: ArrayBuffer, o: Offset): GossipPee
     gossipAddr: readOptSocketAddr(view, o),
     shredVersion: readU16(view, o),
     version: readVecU8AsString(view, data, o),
-    activatedStake: readU64(view, o),
+    stake: readU64(view, o),
     commission: readU8(view, o),
     isDelinquent: readBool(view, o),
-    votePubkey: readPubkey(data, o),
+    voteAccount: readPubkey(data, o),
     lastVote: readU64(view, o),
     rootSlot: readU64(view, o),
     wallclock: readU64(view, o),
+    // Geo/ASN enrichment from IPinfo Lite MMDB (server-side)
+    countryCode: readVecU8AsString(view, data, o),
+    continentCode: readVecU8AsString(view, data, o),
+    asn: readVecU8AsString(view, data, o),
+    asName: readVecU8AsString(view, data, o),
+    asDomain: readVecU8AsString(view, data, o),
   };
 }
 

@@ -39,6 +39,16 @@ struct GossipPeer {
     uint8_t commission = 0;
     bool is_delinquent = false;
     uint64_t wallclock = 0;
+    /// ISO 3166 country code (e.g. "US", "DE")
+    std::string country_code;
+    /// Two-letter continent code (e.g. "NA", "EU")
+    std::string continent_code;
+    /// ASN string (e.g. "AS15169")
+    std::string asn;
+    /// AS organization name (e.g. "Google LLC")
+    std::string as_name;
+    /// AS organization domain (e.g. "google.com")
+    std::string as_domain;
 };
 
 /** Slot update data */

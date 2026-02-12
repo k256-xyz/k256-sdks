@@ -20,6 +20,7 @@ module K256
       :identity, :tpu_quic, :tpu_udp, :tpu_forwards_quic, :tpu_forwards_udp,
       :tpu_vote, :gossip_addr, :version, :shred_version, :stake,
       :commission, :is_delinquent, :wallclock,
+      :country_code, :continent_code, :asn, :as_name, :as_domain,
       keyword_init: true
     )
 
