@@ -53,6 +53,13 @@ function readU16(view: DataView, o: Offset): number {
   return val;
 }
 
+/** Read a wincode f64 (little-endian IEEE 754) */
+function readF64(view: DataView, o: Offset): number {
+  const val = view.getFloat64(o.v, true);
+  o.v += 8;
+  return val;
+}
+
 /** Read a wincode u8 */
 function readU8(view: DataView, o: Offset): number {
   const val = view.getUint8(o.v);
@@ -124,12 +131,16 @@ function readGossipPeer(view: DataView, data: ArrayBuffer, o: Offset): GossipPee
     lastVote: readU64(view, o),
     rootSlot: readU64(view, o),
     wallclock: readU64(view, o),
-    // Geo/ASN enrichment from IPinfo Lite MMDB (server-side)
+    // Geo/ASN enrichment from MaxMind GeoLite2 (server-side)
     countryCode: readVecU8AsString(view, data, o),
     continentCode: readVecU8AsString(view, data, o),
     asn: readVecU8AsString(view, data, o),
     asName: readVecU8AsString(view, data, o),
-    asDomain: readVecU8AsString(view, data, o),
+    city: readVecU8AsString(view, data, o),
+    region: readVecU8AsString(view, data, o),
+    latitude: readF64(view, o),
+    longitude: readF64(view, o),
+    timezone: readVecU8AsString(view, data, o),
   };
 }
 

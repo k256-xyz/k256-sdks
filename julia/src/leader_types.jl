@@ -34,7 +34,11 @@ struct GossipPeer
     continent_code::Union{String, Nothing}
     asn::Union{String, Nothing}
     as_name::Union{String, Nothing}
-    as_domain::Union{String, Nothing}
+    city::Union{String, Nothing}
+    region::Union{String, Nothing}
+    latitude::Union{Float64, Nothing}
+    longitude::Union{Float64, Nothing}
+    timezone::Union{String, Nothing}
 end
 
 """Slot update data (snapshot)."""

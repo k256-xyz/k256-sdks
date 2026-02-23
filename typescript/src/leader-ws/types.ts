@@ -102,7 +102,7 @@ export interface GossipPeer {
   lastVote: number;
   rootSlot: number;
   wallclock: number;
-  /** ISO 3166 country code (e.g. "US", "DE") — from IPinfo Lite MMDB on server */
+  /** ISO 3166 country code (e.g. "US", "DE") — from MaxMind GeoLite2 on server */
   countryCode: string;
   /** Two-letter continent code (e.g. "NA", "EU") */
   continentCode: string;
@@ -110,8 +110,16 @@ export interface GossipPeer {
   asn: string;
   /** AS organization name (e.g. "Google LLC") */
   asName: string;
-  /** AS organization domain (e.g. "google.com") */
-  asDomain: string;
+  /** City name (e.g. "Frankfurt") — from MaxMind GeoLite2 on server */
+  city: string;
+  /** Region/state name (e.g. "California") */
+  region: string;
+  /** Latitude */
+  latitude: number;
+  /** Longitude */
+  longitude: number;
+  /** IANA timezone (e.g. "America/Los_Angeles") */
+  timezone: string;
 }
 
 /** Full gossip peer list (snapshot — apply gossip_diff to keep current) */

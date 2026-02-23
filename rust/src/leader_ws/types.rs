@@ -97,9 +97,21 @@ pub struct GossipPeer {
     /// AS organization name (e.g. "Google LLC")
     #[serde(rename = "asName", default)]
     pub as_name: String,
-    /// AS organization domain (e.g. "google.com")
-    #[serde(rename = "asDomain", default)]
-    pub as_domain: String,
+    /// City name (e.g. "Frankfurt") — from MaxMind GeoLite2 on server
+    #[serde(default)]
+    pub city: String,
+    /// Region/state name (e.g. "California")
+    #[serde(default)]
+    pub region: String,
+    /// Latitude
+    #[serde(default)]
+    pub latitude: f64,
+    /// Longitude
+    #[serde(default)]
+    pub longitude: f64,
+    /// IANA timezone (e.g. "America/Los_Angeles")
+    #[serde(default)]
+    pub timezone: String,
 }
 
 /// Gossip snapshot data.

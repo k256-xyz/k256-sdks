@@ -25,6 +25,14 @@ public class GossipPeer {
     public String asn;
     /** AS organization name (e.g. "Google LLC") */
     public String asName;
-    /** AS organization domain (e.g. "google.com") */
-    public String asDomain;
+    /** City name (e.g. "Frankfurt") — from MaxMind GeoLite2 on server */
+    public String city;
+    /** Region/state name (e.g. "California") */
+    public String region;
+    /** Latitude */
+    public double latitude;
+    /** Longitude */
+    public double longitude;
+    /** IANA timezone (e.g. "America/Los_Angeles") */
+    public String timezone;
 }

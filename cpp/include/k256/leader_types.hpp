@@ -39,7 +39,7 @@ struct GossipPeer {
     uint8_t commission = 0;
     bool is_delinquent = false;
     uint64_t wallclock = 0;
-    /// ISO 3166 country code (e.g. "US", "DE")
+    /// ISO 3166 country code (e.g. "US", "DE") — from MaxMind GeoLite2 on server
     std::string country_code;
     /// Two-letter continent code (e.g. "NA", "EU")
     std::string continent_code;
@@ -47,8 +47,16 @@ struct GossipPeer {
     std::string asn;
     /// AS organization name (e.g. "Google LLC")
     std::string as_name;
-    /// AS organization domain (e.g. "google.com")
-    std::string as_domain;
+    /// City name (e.g. "Frankfurt") — from MaxMind GeoLite2 on server
+    std::string city;
+    /// Region/state name (e.g. "California")
+    std::string region;
+    /// Latitude
+    double latitude = 0.0;
+    /// Longitude
+    double longitude = 0.0;
+    /// IANA timezone (e.g. "America/Los_Angeles")
+    std::string timezone;
 };
 
 /** Slot update data */

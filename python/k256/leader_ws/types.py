@@ -59,7 +59,11 @@ class GossipPeer:
     continent_code: str = ""
     asn: str = ""
     as_name: str = ""
-    as_domain: str = ""
+    city: str = ""
+    region: str = ""
+    latitude: float = 0.0
+    longitude: float = 0.0
+    timezone: str = ""
 
 
 @dataclass

@@ -1,5 +1,7 @@
 package k256
 
+import "encoding/json"
+
 // Leader Schedule WebSocket message types.
 // All messages are JSON text frames with: type, kind, key (optional), data.
 
@@ -73,7 +75,11 @@ type GossipPeer struct {
 	ContinentCode   string  `json:"continentCode"`
 	ASN             string  `json:"asn"`
 	ASName          string  `json:"asName"`
-	ASDomain        string  `json:"asDomain"`
+	City            string  `json:"city"`
+	Region          string  `json:"region"`
+	Latitude        float64 `json:"latitude"`
+	Longitude       float64 `json:"longitude"`
+	Timezone        string  `json:"timezone"`
 }
 
 // GossipSnapshotData is the payload of a gossip_snapshot message.

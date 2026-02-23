@@ -38,8 +38,16 @@ public struct GossipPeer: Codable {
     public let asn: String?
     /// AS organization name (e.g. "Google LLC")
     public let asName: String?
-    /// AS organization domain (e.g. "google.com")
-    public let asDomain: String?
+    /// City name (e.g. "Frankfurt") — from MaxMind GeoLite2 on server
+    public let city: String?
+    /// Region/state name (e.g. "California")
+    public let region: String?
+    /// Latitude
+    public let latitude: Double?
+    /// Longitude
+    public let longitude: Double?
+    /// IANA timezone (e.g. "America/Los_Angeles")
+    public let timezone: String?
 }
 
 public struct SlotUpdateData: Codable {
