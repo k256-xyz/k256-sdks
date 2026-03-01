@@ -323,6 +323,51 @@ module K256
         nil
       end
 
+      # Decode price entries from PriceBatch/PriceSnapshot payload.
+      # Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+      #
+      # @param data [String] Binary payload (without message type byte)
+      # @return [Array<PriceEntry>] Decoded price entries
+      def decode_price_entries(data)
+        return [] if data.bytesize < 2
+
+        bytes = data.bytes
+        count = read_u16_le(bytes, 0)
+        offset = 2
+        entries = []
+        count.times do
+          break if offset + 56 > bytes.length
+
+          mint = Base58.encode(bytes[offset, 32])
+          usd_price_raw = read_u64_le(bytes, offset + 32)
+          slot = read_u64_le(bytes, offset + 40)
+          timestamp_ms = read_u64_le(bytes, offset + 48)
+          entries << PriceEntry.new(
+            mint: mint, usd_price: usd_price_raw / 1e12,
+            slot: slot, timestamp_ms: timestamp_ms
+          )
+          offset += 56
+        end
+        entries
+      end
+
+      # Decode a single price update from binary payload.
+      # Wire format: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+      #
+      # @param data [String] Binary payload (without message type byte)
+      # @return [PriceEntry, nil] Decoded price entry or nil if too short
+      def decode_price_update(data)
+        return nil if data.bytesize < 56
+
+        bytes = data.bytes
+        PriceEntry.new(
+          mint: Base58.encode(bytes[0, 32]),
+          usd_price: read_u64_le(bytes, 32) / 1e12,
+          slot: read_u64_le(bytes, 40),
+          timestamp_ms: read_u64_le(bytes, 48)
+        )
+      end
+
       private
 
       def read_u64_le(bytes, offset)

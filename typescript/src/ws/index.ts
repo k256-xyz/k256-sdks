@@ -33,10 +33,11 @@ export type {
   ConnectionState,
   SubscribeOptions,
   SubscribeQuoteOptions,
+  SubscribePriceOptions,
 } from './client';
 
 // Decoder (for advanced usage)
-export { decodeMessage, decodePoolUpdateBatch } from './decoder';
+export { decodeMessage, decodePoolUpdateBatch, decodePriceEntries } from './decoder';
 
 // Types
 export { MessageType } from './types';
@@ -48,6 +49,10 @@ export type {
   BlockStatsMessage,
   BlockhashMessage,
   QuoteMessage,
+  PriceEntry,
+  PriceUpdateMessage,
+  PriceBatchMessage,
+  PriceSnapshotMessage,
   HeartbeatMessage,
   ErrorMessage,
   SubscribedMessage,

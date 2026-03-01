@@ -2,7 +2,7 @@
 
 use thiserror::Error;
 
-use crate::types::{AccountFee, Blockhash, FeeMarket, MessageType, NetworkState, OrderLevel, PoolUpdate};
+use crate::types::{AccountFee, Blockhash, FeeMarket, MessageType, NetworkState, OrderLevel, PoolUpdate, PriceEntry};
 use crate::ws::client::DecodedMessage;
 
 /// Decoder error types.
@@ -55,6 +55,9 @@ pub fn decode_message(msg_type: u8, payload: &[u8]) -> Result<Option<DecodedMess
             let bh = decode_blockhash(payload)?;
             Ok(Some(DecodedMessage::Blockhash(bh)))
         }
+        MessageType::PriceUpdate => decode_price_update(payload),
+        MessageType::PriceBatch => decode_price_batch(payload),
+        MessageType::PriceSnapshot => decode_price_snapshot(payload),
         MessageType::Error => {
             let msg = String::from_utf8(payload.to_vec())?;
             Ok(Some(DecodedMessage::Error(msg)))
@@ -293,6 +296,60 @@ fn decode_blockhash(data: &[u8]) -> Result<Blockhash, DecodeError> {
         last_valid_block_height,
         is_stale,
     })
+}
+
+fn decode_price_entries(data: &[u8]) -> Result<Vec<PriceEntry>, DecodeError> {
+    let mut offset = 0;
+    let count = read_u16(data, &mut offset)?;
+    let mut entries = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        if offset + 56 > data.len() {
+            break;
+        }
+        let mint = bs58::encode(&data[offset..offset + 32]).into_string();
+        offset += 32;
+        let usd_price_raw = read_u64(data, &mut offset)?;
+        let slot = read_u64(data, &mut offset)?;
+        let timestamp_ms = read_u64(data, &mut offset)?;
+        entries.push(PriceEntry {
+            mint,
+            usd_price: usd_price_raw as f64 / 1e12,
+            slot,
+            timestamp_ms,
+        });
+    }
+    Ok(entries)
+}
+
+fn decode_price_update(payload: &[u8]) -> Result<Option<DecodedMessage>, DecodeError> {
+    if payload.len() < 56 {
+        return Err(DecodeError::PayloadTooShort {
+            expected: 56,
+            actual: payload.len(),
+        });
+    }
+    let mut offset = 0;
+    let mint = bs58::encode(&payload[0..32]).into_string();
+    offset += 32;
+    let usd_price_raw = read_u64(payload, &mut offset)?;
+    let slot = read_u64(payload, &mut offset)?;
+    let timestamp_ms = read_u64(payload, &mut offset)?;
+    Ok(Some(DecodedMessage::PriceUpdate(PriceEntry {
+        mint,
+        usd_price: usd_price_raw as f64 / 1e12,
+        slot,
+        timestamp_ms,
+    })))
+}
+
+fn decode_price_batch(payload: &[u8]) -> Result<Option<DecodedMessage>, DecodeError> {
+    let entries = decode_price_entries(payload)?;
+    Ok(Some(DecodedMessage::PriceBatch(entries)))
+}
+
+fn decode_price_snapshot(payload: &[u8]) -> Result<Option<DecodedMessage>, DecodeError> {
+    let entries = decode_price_entries(payload)?;
+    Ok(Some(DecodedMessage::PriceSnapshot(entries)))
 }
 
 // Helper functions for reading little-endian integers

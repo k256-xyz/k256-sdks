@@ -18,6 +18,12 @@ module K256
     PONG              = 0x0C # Server → Client: Pong response
     HEARTBEAT         = 0x0D # Server → Client: Connection stats (JSON)
     POOL_UPDATE_BATCH = 0x0E # Server → Client: Batched pool updates
+    BLOCK_STATS       = 0x0F # Server → Client: Block-level statistics
+    SUBSCRIBE_PRICE   = 0x10 # Client → Server: Subscribe to price updates
+    PRICE_UPDATE      = 0x11 # Server → Client: Single price update
+    PRICE_BATCH       = 0x12 # Server → Client: Batched price updates
+    PRICE_SNAPSHOT    = 0x13 # Server → Client: Initial price snapshot
+    UNSUBSCRIBE_PRICE = 0x14 # Client → Server: Unsubscribe from prices
     ERROR             = 0xFF # Server → Client: Error message (UTF-8)
   end
 
@@ -116,6 +122,16 @@ module K256
     :messages_received,
     :messages_sent,
     :subscriptions,
+    keyword_init: true
+  )
+
+  # Single token price from the price feed.
+  # Wire format per entry: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+  PriceEntry = Struct.new(
+    :mint,         # base58 token mint address
+    :usd_price,    # USD price (float, divided by 1e12)
+    :slot,         # Solana slot of the observation
+    :timestamp_ms, # unix timestamp in milliseconds
     keyword_init: true
   )
 

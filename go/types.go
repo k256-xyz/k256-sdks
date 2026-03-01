@@ -32,6 +32,18 @@ const (
 	MessageTypeHeartbeat MessageType = 0x0D
 	// MessageTypePoolUpdateBatch is Server → Client: Batched pool updates
 	MessageTypePoolUpdateBatch MessageType = 0x0E
+	// MessageTypeBlockStats is Server → Client: Block-level statistics
+	MessageTypeBlockStats MessageType = 0x0F
+	// MessageTypeSubscribePrice is Client → Server: Subscribe to price updates (JSON)
+	MessageTypeSubscribePrice MessageType = 0x10
+	// MessageTypePriceUpdate is Server → Client: Single price update (56B bincode)
+	MessageTypePriceUpdate MessageType = 0x11
+	// MessageTypePriceBatch is Server → Client: Batched price updates
+	MessageTypePriceBatch MessageType = 0x12
+	// MessageTypePriceSnapshot is Server → Client: Initial price snapshot
+	MessageTypePriceSnapshot MessageType = 0x13
+	// MessageTypeUnsubscribePrice is Client → Server: Unsubscribe from prices
+	MessageTypeUnsubscribePrice MessageType = 0x14
 	// MessageTypeError is Server → Client: Error message (UTF-8)
 	MessageTypeError MessageType = 0xFF
 )
@@ -204,6 +216,20 @@ type Token struct {
 	Tags []string `json:"tags,omitempty"`
 	// Additional metadata
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
+}
+
+// PriceEntry represents a single token price from the price feed.
+// Wire format per entry: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+// usd_price uses fixed-point with 10^12 precision (divide by 1e12 to get USD).
+type PriceEntry struct {
+	// Base58-encoded token mint address
+	Mint string `json:"mint"`
+	// USD price (fixed-point / 1e12)
+	UsdPrice float64 `json:"usd_price"`
+	// Solana slot of the price observation
+	Slot uint64 `json:"slot"`
+	// Unix timestamp in milliseconds
+	TimestampMs uint64 `json:"timestamp_ms"`
 }
 
 // Heartbeat represents a connection heartbeat with stats.

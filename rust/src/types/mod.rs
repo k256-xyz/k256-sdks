@@ -5,6 +5,7 @@ mod fees;
 mod heartbeat;
 mod messages;
 mod pool;
+mod price;
 mod quote;
 mod token;
 
@@ -13,5 +14,6 @@ pub use fees::{AccountFee, FeeMarket, NetworkState};
 pub use heartbeat::Heartbeat;
 pub use messages::MessageType;
 pub use pool::{OrderLevel, Pool, PoolUpdate};
+pub use price::PriceEntry;
 pub use quote::Quote;
 pub use token::Token;

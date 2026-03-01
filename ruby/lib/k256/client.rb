@@ -45,6 +45,7 @@ module K256
       @connected = false
       @running = false
       @last_subscription = nil
+      @last_price_subscription = nil
     end
 
     # Register a callback for pool updates.
@@ -80,6 +81,27 @@ module K256
     # @yield [Heartbeat] Heartbeat
     def on_heartbeat(&block)
       @callbacks[:heartbeat] = block
+    end
+
+    # Register a callback for single price updates.
+    #
+    # @yield [PriceEntry] Price entry
+    def on_price_update(&block)
+      @callbacks[:price_update] = block
+    end
+
+    # Register a callback for batched price updates.
+    #
+    # @yield [Array<PriceEntry>] Price entries
+    def on_price_batch(&block)
+      @callbacks[:price_batch] = block
+    end
+
+    # Register a callback for price snapshots.
+    #
+    # @yield [Array<PriceEntry>] Price entries
+    def on_price_snapshot(&block)
+      @callbacks[:price_snapshot] = block
     end
 
     # Register a callback for errors.
@@ -140,6 +162,27 @@ module K256
       send_json(type: "unsubscribe") if @connected
     end
 
+    # Subscribe to price updates.
+    #
+    # @param tokens [Array<String>] Token mint addresses (empty = all tokens)
+    # @param threshold_bps [Integer] Minimum price change in basis points to trigger update
+    def subscribe_prices(tokens: [], threshold_bps: 10)
+      @last_price_subscription = {
+        tokens: tokens,
+        threshold_bps: threshold_bps
+      }
+
+      send_price_subscribe if @connected
+    end
+
+    # Unsubscribe from price updates.
+    def unsubscribe_prices
+      @last_price_subscription = nil
+      return unless @connected
+
+      @ws&.send([MessageType::UNSUBSCRIBE_PRICE].pack("C"))
+    end
+
     private
 
     def do_connect
@@ -170,6 +213,7 @@ module K256
       @reconnect_delay = @reconnect_delay_initial
       @callbacks[:connected]&.call
       send_subscribe if @last_subscription
+      send_price_subscribe if @last_price_subscription
     end
 
     def handle_message(msg)
@@ -211,6 +255,23 @@ module K256
         if @callbacks[:quote]
           quote = Decoder.decode_quote(payload)
           @callbacks[:quote].call(quote) if quote
+        end
+      when MessageType::PRICE_UPDATE
+        if @callbacks[:price_update]
+          entry = Decoder.decode_price_update(payload)
+          @callbacks[:price_update].call(entry) if entry
+        end
+      when MessageType::PRICE_BATCH
+        entries = Decoder.decode_price_entries(payload)
+        @callbacks[:price_batch]&.call(entries)
+        if @callbacks[:price_update]
+          entries.each { |e| @callbacks[:price_update].call(e) }
+        end
+      when MessageType::PRICE_SNAPSHOT
+        entries = Decoder.decode_price_entries(payload)
+        @callbacks[:price_snapshot]&.call(entries)
+        if @callbacks[:price_update]
+          entries.each { |e| @callbacks[:price_update].call(e) }
         end
       when MessageType::ERROR
         @callbacks[:error]&.call(payload.force_encoding("UTF-8"))
@@ -274,6 +335,18 @@ module K256
       msg[:token_pairs] = @last_subscription[:token_pairs] if @last_subscription[:token_pairs]
 
       send_json(msg)
+    end
+
+    def send_price_subscribe
+      return unless @last_price_subscription
+
+      payload = {
+        tokens: @last_price_subscription[:tokens],
+        threshold_bps: @last_price_subscription[:threshold_bps]
+      }
+
+      json_bytes = payload.to_json.encode("UTF-8").bytes
+      @ws&.send([MessageType::SUBSCRIBE_PRICE, *json_bytes].pack("C*"))
     end
 
     def send_json(data)

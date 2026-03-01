@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace K256;
 
-use K256\Types\{AccountFee, Blockhash, FeeMarket, NetworkState, OrderLevel, PoolUpdate, Quote};
+use K256\Types\{AccountFee, Blockhash, FeeMarket, NetworkState, OrderLevel, PoolUpdate, PriceEntry, Quote};
 use K256\Utils\Base58;
 
 /**
@@ -391,6 +391,62 @@ final class Decoder
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Decode a batch of price entries.
+     * Wire format: [u16 count][56B entry]...
+     *
+     * @param string $data Binary payload (without message type byte)
+     * @return PriceEntry[] Decoded price entries
+     */
+    public static function decodePriceEntries(string $data): array
+    {
+        if (strlen($data) < 2) {
+            return [];
+        }
+
+        $count = self::readU16LE($data, 0);
+        $offset = 2;
+
+        $entries = [];
+        for ($i = 0; $i < $count && $offset + 56 <= strlen($data); $i++) {
+            $mint = Base58::encode(substr($data, $offset, 32));
+            $usdPriceRaw = self::readU64LE($data, $offset + 32);
+            $slot = self::readU64LE($data, $offset + 40);
+            $timestampMs = self::readU64LE($data, $offset + 48);
+
+            $entries[] = new PriceEntry(
+                mint: $mint,
+                usdPrice: $usdPriceRaw / 1e12,
+                slot: $slot,
+                timestampMs: $timestampMs,
+            );
+            $offset += 56;
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Decode a single price update.
+     * Wire format: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+     *
+     * @param string $data Binary payload (without message type byte)
+     * @return PriceEntry|null Decoded price entry or null if too short
+     */
+    public static function decodePriceUpdate(string $data): ?PriceEntry
+    {
+        if (strlen($data) < 56) {
+            return null;
+        }
+
+        return new PriceEntry(
+            mint: Base58::encode(substr($data, 0, 32)),
+            usdPrice: self::readU64LE($data, 32) / 1e12,
+            slot: self::readU64LE($data, 40),
+            timestampMs: self::readU64LE($data, 48),
+        );
     }
 
     private static function readU64LE(string $data, int $offset): int

@@ -24,7 +24,7 @@
  */
 
 import { decodeMessage, decodePoolUpdateBatch } from './decoder';
-import { MessageType, type DecodedMessage, type PoolUpdateMessage, type BlockStatsMessage } from './types';
+import { MessageType, type DecodedMessage, type PoolUpdateMessage, type BlockStatsMessage, type PriceUpdateMessage, type PriceBatchMessage, type PriceSnapshotMessage } from './types';
 
 /**
  * RFC 6455 WebSocket Close Codes
@@ -106,6 +106,16 @@ export interface SubscribeQuoteOptions {
 }
 
 /**
+ * Price subscription options
+ */
+export interface SubscribePriceOptions {
+  /** Token mint addresses to track */
+  tokens: string[];
+  /** Minimum bps change to receive an update (default 10) */
+  thresholdBps?: number;
+}
+
+/**
  * WebSocket client configuration
  */
 export interface K256WebSocketClientConfig {
@@ -163,6 +173,12 @@ export interface K256WebSocketClientConfig {
   onQuote?: (data: DecodedMessage & { type: 'quote' }) => void;
   /** Called on quote subscription confirmed */
   onQuoteSubscribed?: (data: DecodedMessage & { type: 'quote_subscribed' }) => void;
+  /** Called on single price update */
+  onPriceUpdate?: (message: PriceUpdateMessage) => void;
+  /** Called on batched price updates */
+  onPriceBatch?: (message: PriceBatchMessage) => void;
+  /** Called on initial price snapshot (after subscribe) */
+  onPriceSnapshot?: (message: PriceSnapshotMessage) => void;
   /** Called on heartbeat */
   onHeartbeat?: (data: DecodedMessage & { type: 'heartbeat' }) => void;
   /** Called on pong response (with round-trip latency) */
@@ -228,8 +244,8 @@ export class K256WebSocketClient {
   private config: Required<Omit<K256WebSocketClientConfig, 
     'onStateChange' | 'onConnect' | 'onDisconnect' | 'onReconnecting' | 'onError' |
     'onSubscribed' | 'onPoolUpdate' | 'onPoolUpdateBatch' | 'onFeeMarket' | 'onBlockStats' |
-    'onBlockhash' | 'onQuote' | 'onQuoteSubscribed' | 'onHeartbeat' | 'onPong' | 
-    'onMessage' | 'onRawMessage'
+    'onBlockhash' | 'onQuote' | 'onQuoteSubscribed' | 'onPriceUpdate' | 'onPriceBatch' |
+    'onPriceSnapshot' | 'onHeartbeat' | 'onPong' | 'onMessage' | 'onRawMessage'
   >> & K256WebSocketClientConfig;
   
   private _state: ConnectionState = 'disconnected';
@@ -242,6 +258,7 @@ export class K256WebSocketClient {
   private lastHeartbeatTime = 0;
   private pendingSubscription: SubscribeOptions | null = null;
   private pendingQuoteSubscription: SubscribeQuoteOptions | null = null;
+  private pendingPriceSubscription: SubscribePriceOptions | null = null;
   private isIntentionallyClosed = false;
 
   /** Current connection state */
@@ -352,11 +369,38 @@ export class K256WebSocketClient {
   }
 
   /**
+   * Subscribe to real-time price updates
+   * @param options - Token mints and threshold configuration
+   */
+  subscribePrices(options: SubscribePriceOptions): void {
+    this.pendingPriceSubscription = options;
+
+    if (!this.isConnected) {
+      return;
+    }
+
+    this.sendPriceSubscription(options);
+  }
+
+  /**
+   * Unsubscribe from price updates
+   */
+  unsubscribePrices(): void {
+    this.pendingPriceSubscription = null;
+
+    if (!this.isConnected) return;
+
+    const buf = new Uint8Array([MessageType.UnsubscribePrice]);
+    this.ws?.send(buf);
+  }
+
+  /**
    * Unsubscribe from all channels
    */
   unsubscribe(): void {
     this.pendingSubscription = null;
     this.pendingQuoteSubscription = null;
+    this.pendingPriceSubscription = null;
     
     if (!this.isConnected) return;
     
@@ -426,6 +470,9 @@ export class K256WebSocketClient {
           }
           if (this.pendingQuoteSubscription) {
             this.sendQuoteSubscription(this.pendingQuoteSubscription);
+          }
+          if (this.pendingPriceSubscription) {
+            this.sendPriceSubscription(this.pendingPriceSubscription);
           }
           
           this.config.onConnect?.();
@@ -553,6 +600,21 @@ export class K256WebSocketClient {
         case 'quote_subscribed':
           this.config.onQuoteSubscribed?.(decoded as DecodedMessage & { type: 'quote_subscribed' });
           break;
+        case 'price_update':
+          this.config.onPriceUpdate?.(decoded as PriceUpdateMessage);
+          break;
+        case 'price_batch':
+          this.config.onPriceBatch?.(decoded as PriceBatchMessage);
+          for (const entry of (decoded as PriceBatchMessage).data) {
+            this.config.onPriceUpdate?.({ type: 'price_update', data: entry });
+          }
+          break;
+        case 'price_snapshot':
+          this.config.onPriceSnapshot?.(decoded as PriceSnapshotMessage);
+          for (const entry of (decoded as PriceSnapshotMessage).data) {
+            this.config.onPriceUpdate?.({ type: 'price_update', data: entry });
+          }
+          break;
         case 'heartbeat':
           this.lastHeartbeatTime = Date.now();
           this.resetHeartbeatTimeout();
@@ -620,6 +682,19 @@ export class K256WebSocketClient {
     };
 
     this.ws?.send(JSON.stringify(msg));
+  }
+
+  private sendPriceSubscription(options: SubscribePriceOptions): void {
+    const json = JSON.stringify({
+      tokens: options.tokens,
+      thresholdBps: options.thresholdBps ?? 10,
+    });
+    const encoder = new TextEncoder();
+    const jsonBytes = encoder.encode(json);
+    const buf = new Uint8Array(1 + jsonBytes.length);
+    buf[0] = MessageType.SubscribePrice;
+    buf.set(jsonBytes, 1);
+    this.ws?.send(buf);
   }
 
   private setState(state: ConnectionState): void {

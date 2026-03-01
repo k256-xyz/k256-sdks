@@ -14,6 +14,7 @@ from k256.types import (
     OrderLevel,
     NetworkState,
     MessageType,
+    PriceEntry,
 )
 from k256.utils import base58_encode
 
@@ -48,6 +49,12 @@ def decode_message(
         return _decode_heartbeat(payload)
     elif msg_type == MessageType.ERROR:
         return payload.decode("utf-8", errors="replace")
+    elif msg_type == MessageType.PRICE_UPDATE:
+        return _decode_price_update(payload)
+    elif msg_type == MessageType.PRICE_BATCH:
+        return ("price_batch", decode_price_entries(payload))
+    elif msg_type == MessageType.PRICE_SNAPSHOT:
+        return ("price_snapshot", decode_price_entries(payload))
     elif msg_type == MessageType.PONG:
         return None
     else:
@@ -334,6 +341,56 @@ def _decode_quote(data: bytes) -> Quote:
         slot=slot,
         timestamp_ms=timestamp_ms,
         route_plan=route_plan,
+    )
+
+
+def decode_price_entries(data: bytes) -> list[PriceEntry]:
+    """Decode price entries from a PriceBatch or PriceSnapshot payload.
+
+    Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+    Each entry: [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+    """
+    if len(data) < 2:
+        return []
+
+    count = struct.unpack_from("<H", data, 0)[0]
+    entries = []
+    offset = 2
+
+    for _ in range(count):
+        if offset + 56 > len(data):
+            break
+        mint = base58_encode(data[offset:offset + 32])
+        usd_price_raw = struct.unpack_from("<Q", data, offset + 32)[0]
+        slot = struct.unpack_from("<Q", data, offset + 40)[0]
+        timestamp_ms = struct.unpack_from("<Q", data, offset + 48)[0]
+
+        entries.append(PriceEntry(
+            mint=mint,
+            usd_price=usd_price_raw / 1e12,
+            slot=slot,
+            timestamp_ms=timestamp_ms,
+        ))
+        offset += 56
+
+    return entries
+
+
+def _decode_price_update(data: bytes) -> PriceEntry:
+    """Decode a single price update (56 bytes, no count prefix)."""
+    if len(data) < 56:
+        raise ValueError(f"PriceUpdate payload too short: {len(data)} < 56")
+
+    mint = base58_encode(data[0:32])
+    usd_price_raw = struct.unpack_from("<Q", data, 32)[0]
+    slot = struct.unpack_from("<Q", data, 40)[0]
+    timestamp_ms = struct.unpack_from("<Q", data, 48)[0]
+
+    return PriceEntry(
+        mint=mint,
+        usd_price=usd_price_raw / 1e12,
+        slot=slot,
+        timestamp_ms=timestamp_ms,
     )
 
 

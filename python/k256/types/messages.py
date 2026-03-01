@@ -50,6 +50,24 @@ class MessageType(IntEnum):
     
     POOL_UPDATE_BATCH = 0x0E
     """Server → Client: Batched pool updates"""
-    
+
+    BLOCK_STATS = 0x0F
+    """Server → Client: Block-level statistics"""
+
+    SUBSCRIBE_PRICE = 0x10
+    """Client → Server: Subscribe to price updates (JSON)"""
+
+    PRICE_UPDATE = 0x11
+    """Server → Client: Single price update (56B bincode)"""
+
+    PRICE_BATCH = 0x12
+    """Server → Client: Batched price updates"""
+
+    PRICE_SNAPSHOT = 0x13
+    """Server → Client: Initial price snapshot"""
+
+    UNSUBSCRIBE_PRICE = 0x14
+    """Client → Server: Unsubscribe from prices"""
+
     ERROR = 0xFF
     """Server → Client: Error message (UTF-8)"""

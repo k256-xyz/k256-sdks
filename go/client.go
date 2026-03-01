@@ -59,14 +59,19 @@ type WebSocketClient struct {
 	reconnectDelay   time.Duration
 	lastSubscription *SubscribeRequest
 
-	onPoolUpdate func(*PoolUpdate)
-	onFeeMarket  func(*FeeMarket)
-	onBlockhash  func(*Blockhash)
-	onQuote         func(*Quote)
-	onHeartbeat     func(*Heartbeat)
-	onError         func(error)
-	onConnected     func()
-	onDisconnected  func()
+	onPoolUpdate     func(*PoolUpdate)
+	onFeeMarket      func(*FeeMarket)
+	onBlockhash      func(*Blockhash)
+	onQuote          func(*Quote)
+	onPriceUpdate    func(*PriceEntry)
+	onPriceBatch     func([]PriceEntry)
+	onPriceSnapshot  func([]PriceEntry)
+	onHeartbeat      func(*Heartbeat)
+	onError          func(error)
+	onConnected      func()
+	onDisconnected   func()
+
+	lastPriceSubscription *SubscribePriceRequest
 }
 
 // NewWebSocket creates a new WebSocket client with the given configuration.
@@ -110,6 +115,22 @@ func (c *WebSocketClient) OnQuote(callback func(*Quote)) {
 // OnHeartbeat registers a callback for heartbeat messages.
 func (c *WebSocketClient) OnHeartbeat(callback func(*Heartbeat)) {
 	c.onHeartbeat = callback
+}
+
+// OnPriceUpdate registers a callback for individual price updates.
+// Also called for each entry in batch and snapshot messages.
+func (c *WebSocketClient) OnPriceUpdate(callback func(*PriceEntry)) {
+	c.onPriceUpdate = callback
+}
+
+// OnPriceBatch registers a callback for batched price updates.
+func (c *WebSocketClient) OnPriceBatch(callback func([]PriceEntry)) {
+	c.onPriceBatch = callback
+}
+
+// OnPriceSnapshot registers a callback for the initial price snapshot after subscribing.
+func (c *WebSocketClient) OnPriceSnapshot(callback func([]PriceEntry)) {
+	c.onPriceSnapshot = callback
 }
 
 // OnError registers a callback for errors.
@@ -213,6 +234,13 @@ func (c *WebSocketClient) connect() error {
 		}
 	}
 
+	// Resubscribe to prices if we had a previous price subscription
+	if c.lastPriceSubscription != nil {
+		if err := c.sendPriceSubscribe(c.lastPriceSubscription); err != nil {
+			return err
+		}
+	}
+
 	return c.messageLoop()
 }
 
@@ -301,6 +329,33 @@ func (c *WebSocketClient) handleBinaryMessage(data []byte) {
 				return
 			}
 			c.onQuote(quote)
+		}
+
+	case MessageTypePriceUpdate:
+		if c.onPriceUpdate != nil {
+			entry, err := DecodePriceUpdate(payload)
+			if err != nil {
+				log.Printf("Error decoding price update: %v", err)
+				return
+			}
+			c.onPriceUpdate(entry)
+		}
+
+	case MessageTypePriceBatch, MessageTypePriceSnapshot:
+		entries, err := DecodePriceEntries(payload)
+		if err != nil {
+			log.Printf("Error decoding price batch: %v", err)
+			return
+		}
+		if msgType == MessageTypePriceSnapshot && c.onPriceSnapshot != nil {
+			c.onPriceSnapshot(entries)
+		} else if msgType == MessageTypePriceBatch && c.onPriceBatch != nil {
+			c.onPriceBatch(entries)
+		}
+		if c.onPriceUpdate != nil {
+			for i := range entries {
+				c.onPriceUpdate(&entries[i])
+			}
 		}
 
 	case MessageTypePong:
@@ -396,6 +451,62 @@ func (c *WebSocketClient) Unsubscribe() error {
 	}
 
 	return conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"unsubscribe"}`))
+}
+
+// SubscribePriceRequest represents a price subscription request.
+type SubscribePriceRequest struct {
+	Tokens       []string `json:"tokens"`
+	ThresholdBps int      `json:"thresholdBps,omitempty"`
+}
+
+// SubscribePrices subscribes to real-time price updates.
+func (c *WebSocketClient) SubscribePrices(request SubscribePriceRequest) error {
+	if request.ThresholdBps == 0 {
+		request.ThresholdBps = 10
+	}
+	c.lastPriceSubscription = &request
+
+	if !c.IsConnected() {
+		return nil
+	}
+
+	return c.sendPriceSubscribe(&request)
+}
+
+// UnsubscribePrices unsubscribes from price updates.
+func (c *WebSocketClient) UnsubscribePrices() error {
+	c.lastPriceSubscription = nil
+
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
+	if conn == nil {
+		return nil
+	}
+
+	return conn.WriteMessage(websocket.BinaryMessage, []byte{byte(MessageTypeUnsubscribePrice)})
+}
+
+func (c *WebSocketClient) sendPriceSubscribe(request *SubscribePriceRequest) error {
+	c.mu.RLock()
+	conn := c.conn
+	c.mu.RUnlock()
+
+	if conn == nil {
+		return fmt.Errorf("not connected")
+	}
+
+	jsonData, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+
+	buf := make([]byte, 1+len(jsonData))
+	buf[0] = byte(MessageTypeSubscribePrice)
+	copy(buf[1:], jsonData)
+
+	return conn.WriteMessage(websocket.BinaryMessage, buf)
 }
 
 // Close closes the WebSocket connection.

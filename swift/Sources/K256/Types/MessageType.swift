@@ -31,6 +31,18 @@ public enum K256MessageType: UInt8, Sendable {
     case heartbeat = 0x0D
     /// Server → Client: Batched pool updates for high throughput
     case poolUpdateBatch = 0x0E
+    /// Server → Client: Block-level statistics
+    case blockStats = 0x0F
+    /// Client → Server: Subscribe to price updates (JSON)
+    case subscribePrice = 0x10
+    /// Server → Client: Single price update (56B bincode)
+    case priceUpdate = 0x11
+    /// Server → Client: Batched price updates
+    case priceBatch = 0x12
+    /// Server → Client: Initial price snapshot
+    case priceSnapshot = 0x13
+    /// Client → Server: Unsubscribe from prices
+    case unsubscribePrice = 0x14
     /// Server → Client: Error message (UTF-8 string)
     case error = 0xFF
 }

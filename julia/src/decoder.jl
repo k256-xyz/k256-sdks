@@ -346,3 +346,57 @@ function decode_quote(data::Vector{UInt8})::Union{Quote, Nothing}
         return nothing
     end
 end
+
+"""
+    decode_price_entries(data::Vector{UInt8}) -> Vector{PriceEntry}
+
+Decode price entries from PriceBatch/PriceSnapshot payload.
+Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+
+# Arguments
+- `data`: Binary payload (without message type byte)
+
+# Returns
+- Vector of decoded `PriceEntry` objects
+"""
+function decode_price_entries(data::Vector{UInt8})::Vector{PriceEntry}
+    length(data) < 2 && return PriceEntry[]
+
+    count = Int(read_u16_le(data, 1))
+    offset = 3  # After u16 (1-based)
+
+    entries = PriceEntry[]
+    for _ in 1:count
+        offset + 55 > length(data) && break
+        mint = base58_encode(data[offset:offset+31])
+        usd_price = Float64(read_u64_le(data, offset + 32)) / 1e12
+        slot = read_u64_le(data, offset + 40)
+        timestamp_ms = read_u64_le(data, offset + 48)
+        push!(entries, PriceEntry(mint, usd_price, slot, timestamp_ms))
+        offset += 56
+    end
+
+    return entries
+end
+
+"""
+    decode_price_update(data::Vector{UInt8}) -> Union{PriceEntry, Nothing}
+
+Decode a single price update (56 bytes, no count prefix).
+
+# Arguments
+- `data`: Binary payload (without message type byte)
+
+# Returns
+- Decoded `PriceEntry` or `nothing` if too short
+"""
+function decode_price_update(data::Vector{UInt8})::Union{PriceEntry, Nothing}
+    length(data) < 56 && return nothing
+
+    mint = base58_encode(data[1:32])
+    usd_price = Float64(read_u64_le(data, 33)) / 1e12
+    slot = read_u64_le(data, 41)
+    timestamp_ms = read_u64_le(data, 49)
+
+    return PriceEntry(mint, usd_price, slot, timestamp_ms)
+end

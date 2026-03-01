@@ -17,8 +17,9 @@ from k256.types import (
     Quote,
     Heartbeat,
     MessageType,
+    PriceEntry,
 )
-from k256.ws.decoder import decode_message
+from k256.ws.decoder import decode_message, decode_price_entries
 
 logger = logging.getLogger(__name__)
 
@@ -133,10 +134,15 @@ class K256WebSocketClient:
         self._on_fee_market: Optional[Callable[[FeeMarket], None]] = None
         self._on_blockhash: Optional[Callable[[Blockhash], None]] = None
         self._on_quote: Optional[Callable[[Quote], None]] = None
+        self._on_price_update: Optional[Callable[[PriceEntry], None]] = None
+        self._on_price_batch: Optional[Callable[[list[PriceEntry]], None]] = None
+        self._on_price_snapshot: Optional[Callable[[list[PriceEntry]], None]] = None
         self._on_heartbeat: Optional[Callable[[Heartbeat], None]] = None
         self._on_error: Optional[Callable[[Exception], None]] = None
         self._on_connected: Optional[Callable[[], None]] = None
         self._on_disconnected: Optional[Callable[[], None]] = None
+
+        self._last_price_subscription: Optional[dict] = None
     
     def on_pool_update(self, callback: Callable[[PoolUpdate], None]) -> Callable[[PoolUpdate], None]:
         """Register a callback for pool updates.
@@ -163,7 +169,23 @@ class K256WebSocketClient:
         """Register a callback for quote updates."""
         self._on_quote = callback
         return callback
-    
+
+    def on_price_update(self, callback: Callable[[PriceEntry], None]) -> Callable[[PriceEntry], None]:
+        """Register a callback for individual price updates.
+        Also called for each entry in batch and snapshot messages."""
+        self._on_price_update = callback
+        return callback
+
+    def on_price_batch(self, callback: Callable[[list[PriceEntry]], None]) -> Callable[[list[PriceEntry]], None]:
+        """Register a callback for batched price updates."""
+        self._on_price_batch = callback
+        return callback
+
+    def on_price_snapshot(self, callback: Callable[[list[PriceEntry]], None]) -> Callable[[list[PriceEntry]], None]:
+        """Register a callback for the initial price snapshot after subscribing."""
+        self._on_price_snapshot = callback
+        return callback
+
     def on_heartbeat(self, callback: Callable[[Heartbeat], None]) -> Callable[[Heartbeat], None]:
         """Register a callback for heartbeat messages."""
         self._on_heartbeat = callback
@@ -219,7 +241,10 @@ class K256WebSocketClient:
                     # Resubscribe if we had a previous subscription
                     if self._last_subscription:
                         await self._send_subscribe(self._last_subscription)
-                    
+
+                    if self._last_price_subscription:
+                        await self._send_price_subscribe()
+
                     await self._message_loop()
                     
             except websockets.ConnectionClosed as e:
@@ -273,6 +298,17 @@ class K256WebSocketClient:
             
             if isinstance(decoded, PoolUpdate) and self._on_pool_update:
                 self._on_pool_update(decoded)
+            elif isinstance(decoded, PriceEntry) and self._on_price_update:
+                self._on_price_update(decoded)
+            elif isinstance(decoded, tuple) and len(decoded) == 2:
+                kind, entries = decoded
+                if kind == "price_snapshot" and self._on_price_snapshot:
+                    self._on_price_snapshot(entries)
+                elif kind == "price_batch" and self._on_price_batch:
+                    self._on_price_batch(entries)
+                if self._on_price_update:
+                    for entry in entries:
+                        self._on_price_update(entry)
             elif isinstance(decoded, FeeMarket) and self._on_fee_market:
                 self._on_fee_market(decoded)
             elif isinstance(decoded, Blockhash) and self._on_blockhash:
@@ -327,8 +363,17 @@ class K256WebSocketClient:
         """Send a subscription request."""
         if self._ws is None or not self._ws.open:
             raise RuntimeError("Not connected")
-        
+
         await self._ws.send(json.dumps(request.to_dict()))
+
+    async def _send_price_subscribe(self) -> None:
+        """Send a price subscription request."""
+        if self._ws is None or not self._ws.open or self._last_price_subscription is None:
+            return
+
+        json_bytes = json.dumps(self._last_price_subscription).encode("utf-8")
+        buf = bytes([MessageType.SUBSCRIBE_PRICE]) + json_bytes
+        await self._ws.send(buf)
     
     def subscribe(
         self,
@@ -360,12 +405,38 @@ class K256WebSocketClient:
         if self.is_connected:
             asyncio.create_task(self._send_subscribe(request))
     
+    def subscribe_prices(
+        self,
+        tokens: Optional[list[str]] = None,
+        *,
+        threshold_bps: int = 10,
+    ) -> None:
+        """Subscribe to real-time price updates.
+
+        Args:
+            tokens: Token mint addresses to track (empty for all)
+            threshold_bps: Minimum bps change to receive update (default 10)
+        """
+        self._last_price_subscription = {
+            "tokens": tokens or [],
+            "thresholdBps": threshold_bps,
+        }
+        if self.is_connected:
+            asyncio.create_task(self._send_price_subscribe())
+
+    def unsubscribe_prices(self) -> None:
+        """Unsubscribe from price updates."""
+        self._last_price_subscription = None
+        if self.is_connected and self._ws:
+            asyncio.create_task(self._ws.send(bytes([MessageType.UNSUBSCRIBE_PRICE])))
+
     def unsubscribe(self) -> None:
         """Unsubscribe from all channels."""
         if self.is_connected and self._ws:
             asyncio.create_task(self._ws.send(json.dumps({"type": "unsubscribe"})))
         self._last_subscription = None
-    
+        self._last_price_subscription = None
+
     async def close(self) -> None:
         """Close the WebSocket connection."""
         self._running = False

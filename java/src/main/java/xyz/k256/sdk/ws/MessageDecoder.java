@@ -293,6 +293,51 @@ public final class MessageDecoder {
     }
 
     /**
+     * Decode a batch of price entries from binary payload.
+     * Wire format: [u16 count][56B entry1][56B entry2]...
+     *
+     * @param payload Binary payload (without message type byte)
+     * @return List of decoded PriceEntry objects
+     */
+    public static List<PriceEntry> decodePriceEntries(byte[] payload) {
+        if (payload.length < 2) return List.of();
+        ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+        int count = buf.getShort(0) & 0xFFFF;
+        int offset = 2;
+        List<PriceEntry> entries = new ArrayList<>(count);
+        for (int i = 0; i < count && offset + 56 <= payload.length; i++) {
+            byte[] mintBytes = new byte[32];
+            System.arraycopy(payload, offset, mintBytes, 0, 32);
+            String mint = Base58.encode(mintBytes);
+            long usdPriceRaw = buf.getLong(offset + 32);
+            long slot = buf.getLong(offset + 40);
+            long timestampMs = buf.getLong(offset + 48);
+            entries.add(new PriceEntry(mint, (double) usdPriceRaw / 1e12, slot, timestampMs));
+            offset += 56;
+        }
+        return entries;
+    }
+
+    /**
+     * Decode a single price update from binary payload.
+     * Wire format: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+     *
+     * @param payload Binary payload (without message type byte)
+     * @return Decoded PriceEntry or null if payload is too short
+     */
+    public static PriceEntry decodePriceUpdate(byte[] payload) {
+        if (payload.length < 56) return null;
+        ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+        byte[] mintBytes = new byte[32];
+        System.arraycopy(payload, 0, mintBytes, 0, 32);
+        String mint = Base58.encode(mintBytes);
+        long usdPriceRaw = buf.getLong(32);
+        long slot = buf.getLong(40);
+        long timestampMs = buf.getLong(48);
+        return new PriceEntry(mint, (double) usdPriceRaw / 1e12, slot, timestampMs);
+    }
+
+    /**
      * Decode a quote from binary payload.
      *
      * @param payload Binary payload (without message type byte)

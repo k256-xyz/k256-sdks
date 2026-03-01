@@ -6,7 +6,7 @@ namespace K256;
 
 use K256\Decoder;
 use K256\MessageType;
-use K256\Types\{Blockhash, FeeMarket, Heartbeat, PoolUpdate, Quote};
+use K256\Types\{Blockhash, FeeMarket, Heartbeat, PoolUpdate, PriceEntry, Quote};
 use Ratchet\Client\Connector;
 use Ratchet\Client\WebSocket;
 use React\EventLoop\Loop;
@@ -38,6 +38,7 @@ class K256Client
     private ?WebSocket $ws = null;
     private bool $running = false;
     private ?array $lastSubscription = null;
+    private ?array $lastPriceSubscription = null;
 
     /** @var callable|null */
     private $onPoolUpdate = null;
@@ -49,6 +50,12 @@ class K256Client
     private $onQuote = null;
     /** @var callable|null */
     private $onHeartbeat = null;
+    /** @var callable|null */
+    private $onPriceUpdate = null;
+    /** @var callable|null */
+    private $onPriceBatch = null;
+    /** @var callable|null */
+    private $onPriceSnapshot = null;
     /** @var callable|null */
     private $onError = null;
     /** @var callable|null */
@@ -109,6 +116,30 @@ class K256Client
     public function onHeartbeat(callable $callback): void
     {
         $this->onHeartbeat = $callback;
+    }
+
+    /**
+     * Register a callback for individual price updates.
+     */
+    public function onPriceUpdate(callable $callback): void
+    {
+        $this->onPriceUpdate = $callback;
+    }
+
+    /**
+     * Register a callback for batched price updates.
+     */
+    public function onPriceBatch(callable $callback): void
+    {
+        $this->onPriceBatch = $callback;
+    }
+
+    /**
+     * Register a callback for the initial price snapshot.
+     */
+    public function onPriceSnapshot(callable $callback): void
+    {
+        $this->onPriceSnapshot = $callback;
     }
 
     /**
@@ -187,6 +218,7 @@ class K256Client
     public function unsubscribe(): void
     {
         $this->lastSubscription = null;
+        $this->lastPriceSubscription = null;
         $this->sendJson(['type' => 'unsubscribe']);
     }
 
@@ -206,6 +238,10 @@ class K256Client
 
                 if ($this->lastSubscription !== null) {
                     $this->sendSubscribe();
+                }
+
+                if ($this->lastPriceSubscription !== null) {
+                    $this->sendPriceSubscribe();
                 }
 
                 $conn->on('message', function ($msg) {
@@ -288,6 +324,39 @@ class K256Client
                 }
                 break;
 
+            case MessageType::PRICE_UPDATE:
+                if ($this->onPriceUpdate !== null) {
+                    $entry = Decoder::decodePriceUpdate($payload);
+                    if ($entry !== null) {
+                        ($this->onPriceUpdate)($entry);
+                    }
+                }
+                break;
+
+            case MessageType::PRICE_BATCH:
+                $entries = Decoder::decodePriceEntries($payload);
+                if ($this->onPriceBatch !== null) {
+                    ($this->onPriceBatch)($entries);
+                }
+                if ($this->onPriceUpdate !== null) {
+                    foreach ($entries as $entry) {
+                        ($this->onPriceUpdate)($entry);
+                    }
+                }
+                break;
+
+            case MessageType::PRICE_SNAPSHOT:
+                $entries = Decoder::decodePriceEntries($payload);
+                if ($this->onPriceSnapshot !== null) {
+                    ($this->onPriceSnapshot)($entries);
+                }
+                if ($this->onPriceUpdate !== null) {
+                    foreach ($entries as $entry) {
+                        ($this->onPriceUpdate)($entry);
+                    }
+                }
+                break;
+
             case MessageType::ERROR:
                 if ($this->onError !== null) {
                     // Decode UTF-8 error message
@@ -343,6 +412,33 @@ class K256Client
         $this->reconnectDelay = min($this->reconnectDelay * 2, $this->reconnectDelayMax);
     }
 
+    /**
+     * Subscribe to price updates for tokens.
+     *
+     * @param string[] $tokens Token mint addresses (empty = all tokens)
+     * @param int $thresholdBps Minimum price change in basis points to receive updates
+     */
+    public function subscribePrices(array $tokens = [], int $thresholdBps = 10): void
+    {
+        $this->lastPriceSubscription = [
+            'tokens' => $tokens,
+            'threshold_bps' => $thresholdBps,
+        ];
+
+        if ($this->ws !== null) {
+            $this->sendPriceSubscribe();
+        }
+    }
+
+    /**
+     * Unsubscribe from price updates.
+     */
+    public function unsubscribePrices(): void
+    {
+        $this->lastPriceSubscription = null;
+        $this->sendJson(['type' => 'unsubscribe_price']);
+    }
+
     private function sendSubscribe(): void
     {
         if ($this->lastSubscription === null) {
@@ -359,6 +455,21 @@ class K256Client
         if ($this->lastSubscription['token_pairs'] !== null) {
             $msg['token_pairs'] = $this->lastSubscription['token_pairs'];
         }
+
+        $this->sendJson($msg);
+    }
+
+    private function sendPriceSubscribe(): void
+    {
+        if ($this->lastPriceSubscription === null) {
+            return;
+        }
+
+        $msg = [
+            'type' => 'subscribe_price',
+            'tokens' => $this->lastPriceSubscription['tokens'],
+            'threshold_bps' => $this->lastPriceSubscription['threshold_bps'],
+        ];
 
         $this->sendJson($msg);
     }

@@ -49,6 +49,18 @@ enum class MessageType : uint8_t {
     Heartbeat = 0x0D,
     /// Server → Client: Batched pool updates for high throughput
     PoolUpdateBatch = 0x0E,
+    /// Server → Client: Block-level statistics
+    BlockStats = 0x0F,
+    /// Client → Server: Subscribe to price updates (JSON)
+    SubscribePrice = 0x10,
+    /// Server → Client: Single price update (56B bincode)
+    PriceUpdate = 0x11,
+    /// Server → Client: Batched price updates
+    PriceBatch = 0x12,
+    /// Server → Client: Initial price snapshot
+    PriceSnapshot = 0x13,
+    /// Client → Server: Unsubscribe from prices
+    UnsubscribePrice = 0x14,
     /// Server → Client: Error message (UTF-8 string)
     Error = 0xFF
 };
@@ -154,6 +166,19 @@ struct Quote {
     bool is_cached;             ///< Whether from cache
     bool is_stale;              ///< Whether may be stale
     std::string route_plan_json;///< JSON route plan
+};
+
+/**
+ * @brief Single token price from the price feed
+ *
+ * Wire format per entry: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+ * usd_price uses fixed-point with 10^12 precision.
+ */
+struct PriceEntry {
+    std::string mint;       ///< Base58-encoded token mint address
+    double usd_price;       ///< USD price (divided by 1e12)
+    uint64_t slot;          ///< Solana slot of the observation
+    uint64_t timestamp_ms;  ///< Unix timestamp in milliseconds
 };
 
 /**

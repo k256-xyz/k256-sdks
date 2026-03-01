@@ -330,6 +330,56 @@ public enum K256Decoder {
         )
     }
 
+    /// Decode price entries from PriceBatch/PriceSnapshot payload.
+    /// Wire format: [count:u16 LE][entry_1:56B]...[entry_n:56B]
+    ///
+    /// - Parameter data: Binary payload (without message type byte)
+    /// - Returns: Array of decoded PriceEntry objects
+    public static func decodePriceEntries(_ data: Data) -> [PriceEntry] {
+        guard data.count >= 2 else { return [] }
+
+        let count = Int(readU16LE(data, at: 0))
+        var offset = 2
+        var entries: [PriceEntry] = []
+
+        for _ in 0..<count {
+            guard offset + 56 <= data.count else { break }
+            let mint = Base58.encode(data.subdata(in: offset..<(offset + 32)))
+            let usdPrice = Double(readU64LE(data, at: offset + 32)) / 1e12
+            let slot = readU64LE(data, at: offset + 40)
+            let timestampMs = readU64LE(data, at: offset + 48)
+            entries.append(PriceEntry(
+                mint: mint,
+                usdPrice: usdPrice,
+                slot: slot,
+                timestampMs: timestampMs
+            ))
+            offset += 56
+        }
+
+        return entries
+    }
+
+    /// Decode a single price update (56 bytes, no count prefix).
+    ///
+    /// - Parameter data: Binary payload (without message type byte)
+    /// - Returns: Decoded PriceEntry or nil if too short
+    public static func decodePriceUpdate(_ data: Data) -> PriceEntry? {
+        guard data.count >= 56 else { return nil }
+
+        let mint = Base58.encode(data.subdata(in: 0..<32))
+        let usdPrice = Double(readU64LE(data, at: 32)) / 1e12
+        let slot = readU64LE(data, at: 40)
+        let timestampMs = readU64LE(data, at: 48)
+
+        return PriceEntry(
+            mint: mint,
+            usdPrice: usdPrice,
+            slot: slot,
+            timestampMs: timestampMs
+        )
+    }
+
     // MARK: - Private helpers
 
     private static func readU64LE(_ data: Data, at offset: Int) -> UInt64 {

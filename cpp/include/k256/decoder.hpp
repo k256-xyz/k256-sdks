@@ -372,6 +372,41 @@ inline std::optional<Quote> decode_quote(const uint8_t* data, size_t len) {
     }
 }
 
+/**
+ * @brief Decode price entries from PriceBatch/PriceSnapshot payload
+ * Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+ */
+inline std::vector<PriceEntry> decode_price_entries(const uint8_t* data, size_t len) {
+    std::vector<PriceEntry> entries;
+    if (len < 2) return entries;
+    uint16_t count = read_u16_le(data);
+    size_t offset = 2;
+    entries.reserve(count);
+    for (uint16_t i = 0; i < count && offset + 56 <= len; ++i) {
+        PriceEntry entry;
+        entry.mint = base58_encode(data + offset, 32);
+        entry.usd_price = static_cast<double>(read_u64_le(data + offset + 32)) / 1e12;
+        entry.slot = read_u64_le(data + offset + 40);
+        entry.timestamp_ms = read_u64_le(data + offset + 48);
+        entries.push_back(std::move(entry));
+        offset += 56;
+    }
+    return entries;
+}
+
+/**
+ * @brief Decode a single price update (56 bytes, no count prefix)
+ */
+inline std::optional<PriceEntry> decode_price_update(const uint8_t* data, size_t len) {
+    if (len < 56) return std::nullopt;
+    PriceEntry entry;
+    entry.mint = base58_encode(data, 32);
+    entry.usd_price = static_cast<double>(read_u64_le(data + 32)) / 1e12;
+    entry.slot = read_u64_le(data + 40);
+    entry.timestamp_ms = read_u64_le(data + 48);
+    return entry;
+}
+
 } // namespace k256
 
 #endif // K256_DECODER_HPP

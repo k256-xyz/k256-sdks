@@ -7,6 +7,7 @@ from k256.types.quote import Quote
 from k256.types.token import Token
 from k256.types.heartbeat import Heartbeat
 from k256.types.messages import MessageType
+from k256.types.price import PriceEntry
 
 __all__ = [
     "Pool",
@@ -20,4 +21,5 @@ __all__ = [
     "Token",
     "Heartbeat",
     "MessageType",
+    "PriceEntry",
 ]

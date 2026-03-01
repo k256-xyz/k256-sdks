@@ -44,6 +44,16 @@ export const MessageType = {
   PoolUpdateBatch: 0x0e,
   /** Block-level statistics (v3) */
   BlockStats: 0x0f,
+  /** Subscribe to price updates (JSON) - Client → Server */
+  SubscribePrice: 0x10,
+  /** Single price update (bincode 56B) - Server → Client */
+  PriceUpdate: 0x11,
+  /** Batched price updates (bincode [u16 count][entries...]) - Server → Client */
+  PriceBatch: 0x12,
+  /** Initial price snapshot (same binary format as PriceBatch) - Server → Client */
+  PriceSnapshot: 0x13,
+  /** Unsubscribe from prices (no payload) - Client → Server */
+  UnsubscribePrice: 0x14,
   /** Error message (UTF-8 string) */
   Error: 0xff,
 } as const;
@@ -215,6 +225,42 @@ export interface QuoteSubscribedMessage {
 }
 
 /**
+ * Single decoded price entry (shared by PriceUpdate, PriceBatch, PriceSnapshot)
+ */
+export interface PriceEntry {
+  mint: string;
+  usdPrice: number;
+  slot: number;
+  timestampMs: number;
+}
+
+/**
+ * Single price update from binary message (0x11)
+ * Note: K2 currently sends all updates via PriceBatch (0x12)
+ */
+export interface PriceUpdateMessage {
+  type: 'price_update';
+  data: PriceEntry;
+}
+
+/**
+ * Batched price updates from binary message (0x12)
+ */
+export interface PriceBatchMessage {
+  type: 'price_batch';
+  data: PriceEntry[];
+}
+
+/**
+ * Initial price snapshot from binary message (0x13)
+ * Same binary format as PriceBatch — sent once after subscribe_price
+ */
+export interface PriceSnapshotMessage {
+  type: 'price_snapshot';
+  data: PriceEntry[];
+}
+
+/**
  * Error message from server
  */
 export interface ErrorMessage {
@@ -243,6 +289,9 @@ export type DecodedMessage =
   | BlockStatsMessage
   | BlockhashMessage
   | QuoteMessage
+  | PriceUpdateMessage
+  | PriceBatchMessage
+  | PriceSnapshotMessage
   | HeartbeatMessage
   | SubscribedMessage
   | QuoteSubscribedMessage

@@ -9,7 +9,7 @@
 
 import { base58Encode } from '../utils/base58';
 import type { BlockMiniStats, TrendDirection } from '../types';
-import { MessageType, type DecodedMessage, type PoolUpdateMessage, type FeeMarketMessage } from './types';
+import { MessageType, type DecodedMessage, type PoolUpdateMessage, type FeeMarketMessage, type PriceEntry, type PriceBatchMessage, type PriceSnapshotMessage } from './types';
 
 /**
  * Decode a binary WebSocket message from K2
@@ -232,9 +232,64 @@ export function decodeMessage(data: ArrayBuffer): DecodedMessage | null {
       };
     }
 
+    case MessageType.PriceUpdate: {
+      // Single price entry (56 bytes, no count prefix):
+      // [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+      // K2 currently doesn't send 0x11, but handle for forward compat.
+      if (payload.byteLength < 56) return null;
+      const mintBytes = new Uint8Array(payload, 0, 32);
+      return {
+        type: 'price_update',
+        data: {
+          mint: base58Encode(mintBytes),
+          usdPrice: Number(payloadView.getBigUint64(32, true)) / 1e12,
+          slot: Number(payloadView.getBigUint64(40, true)),
+          timestampMs: Number(payloadView.getBigUint64(48, true)),
+        },
+      };
+    }
+
+    case MessageType.PriceBatch:
+    case MessageType.PriceSnapshot: {
+      // Both use identical binary format from serialize_price_message():
+      // [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+      // Each entry: [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+      if (payload.byteLength < 2) return null;
+      const entries = decodePriceEntries(payload);
+      const priceType = msgType === MessageType.PriceSnapshot ? 'price_snapshot' : 'price_batch';
+      return { type: priceType, data: entries } as PriceBatchMessage | PriceSnapshotMessage;
+    }
+
     default:
       return null;
   }
+}
+
+/**
+ * Decode price entries from a PriceBatch or PriceSnapshot payload.
+ *
+ * Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+ */
+export function decodePriceEntries(payload: ArrayBuffer): PriceEntry[] {
+  const view = new DataView(payload);
+  if (payload.byteLength < 2) return [];
+
+  const count = view.getUint16(0, true);
+  const entries: PriceEntry[] = [];
+  let offset = 2;
+
+  for (let i = 0; i < count && offset + 56 <= payload.byteLength; i++) {
+    const mintBytes = new Uint8Array(payload, offset, 32);
+    entries.push({
+      mint: base58Encode(mintBytes),
+      usdPrice: Number(view.getBigUint64(offset + 32, true)) / 1e12,
+      slot: Number(view.getBigUint64(offset + 40, true)),
+      timestampMs: Number(view.getBigUint64(offset + 48, true)),
+    });
+    offset += 56;
+  }
+
+  return entries;
 }
 
 /**

@@ -38,6 +38,18 @@ final class MessageType
     public const HEARTBEAT = 0x0D;
     /** Server → Client: Batched pool updates for high throughput */
     public const POOL_UPDATE_BATCH = 0x0E;
+    /** Server → Client: Block-level statistics */
+    public const BLOCK_STATS = 0x0F;
+    /** Client → Server: Subscribe to price updates (JSON) */
+    public const SUBSCRIBE_PRICE = 0x10;
+    /** Server → Client: Single price update (56B bincode) */
+    public const PRICE_UPDATE = 0x11;
+    /** Server → Client: Batched price updates */
+    public const PRICE_BATCH = 0x12;
+    /** Server → Client: Initial price snapshot */
+    public const PRICE_SNAPSHOT = 0x13;
+    /** Client → Server: Unsubscribe from prices */
+    public const UNSUBSCRIBE_PRICE = 0x14;
     /** Server → Client: Error message (UTF-8 string) */
     public const ERROR = 0xFF;
 

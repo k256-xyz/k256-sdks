@@ -17,6 +17,12 @@ module MessageType
     const PONG              = 0x0C  # Server → Client: Pong response
     const HEARTBEAT         = 0x0D  # Server → Client: Connection stats (JSON)
     const POOL_UPDATE_BATCH = 0x0E  # Server → Client: Batched pool updates
+    const BLOCK_STATS       = 0x0F  # Server → Client: Block-level statistics
+    const SUBSCRIBE_PRICE   = 0x10  # Client → Server: Subscribe to price updates
+    const PRICE_UPDATE      = 0x11  # Server → Client: Single price update
+    const PRICE_BATCH       = 0x12  # Server → Client: Batched price updates
+    const PRICE_SNAPSHOT    = 0x13  # Server → Client: Initial price snapshot
+    const UNSUBSCRIBE_PRICE = 0x14  # Client → Server: Unsubscribe from prices
     const ERROR             = 0xFF  # Server → Client: Error message (UTF-8)
 end
 
@@ -129,6 +135,17 @@ struct Heartbeat
     messages_received::UInt64
     messages_sent::UInt64
     subscriptions::UInt32
+end
+
+"""
+Single token price from the price feed.
+Wire format per entry: 56 bytes [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+"""
+struct PriceEntry
+    mint::String            # base58 token mint address
+    usd_price::Float64      # USD price (divided by 1e12)
+    slot::UInt64            # Solana slot of the observation
+    timestamp_ms::UInt64    # unix timestamp in milliseconds
 end
 
 """

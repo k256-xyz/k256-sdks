@@ -34,6 +34,18 @@ pub enum MessageType {
     Heartbeat = 0x0D,
     /// Server → Client: Batched pool updates
     PoolUpdateBatch = 0x0E,
+    /// Server → Client: Block statistics
+    BlockStats = 0x0F,
+    /// Client → Server: Subscribe to price feed
+    SubscribePrice = 0x10,
+    /// Server → Client: Single price update
+    PriceUpdate = 0x11,
+    /// Server → Client: Batched price updates
+    PriceBatch = 0x12,
+    /// Server → Client: Full price snapshot
+    PriceSnapshot = 0x13,
+    /// Client → Server: Unsubscribe from price feed
+    UnsubscribePrice = 0x14,
     /// Server → Client: Error message (UTF-8)
     Error = 0xFF,
 }
@@ -57,6 +69,12 @@ impl TryFrom<u8> for MessageType {
             0x0C => Ok(Self::Pong),
             0x0D => Ok(Self::Heartbeat),
             0x0E => Ok(Self::PoolUpdateBatch),
+            0x0F => Ok(Self::BlockStats),
+            0x10 => Ok(Self::SubscribePrice),
+            0x11 => Ok(Self::PriceUpdate),
+            0x12 => Ok(Self::PriceBatch),
+            0x13 => Ok(Self::PriceSnapshot),
+            0x14 => Ok(Self::UnsubscribePrice),
             0xFF => Ok(Self::Error),
             other => Err(other),
         }

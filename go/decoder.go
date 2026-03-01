@@ -297,6 +297,60 @@ func DecodeBlockhash(data []byte) (*Blockhash, error) {
 	}, nil
 }
 
+// DecodePriceEntries decodes price entries from a PriceBatch or PriceSnapshot payload.
+// Wire format: [count:u16 LE][entry₁:56B]...[entryₙ:56B]
+// Each entry: [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+func DecodePriceEntries(data []byte) ([]PriceEntry, error) {
+	if len(data) < 2 {
+		return nil, fmt.Errorf("payload too short for price entry count")
+	}
+
+	count := binary.LittleEndian.Uint16(data[0:])
+	offset := 2
+
+	entries := make([]PriceEntry, 0, count)
+	for i := uint16(0); i < count; i++ {
+		if offset+56 > len(data) {
+			break
+		}
+
+		mint := base58.Encode(data[offset : offset+32])
+		usdPriceRaw := binary.LittleEndian.Uint64(data[offset+32:])
+		slot := binary.LittleEndian.Uint64(data[offset+40:])
+		timestampMs := binary.LittleEndian.Uint64(data[offset+48:])
+
+		entries = append(entries, PriceEntry{
+			Mint:        mint,
+			UsdPrice:    float64(usdPriceRaw) / 1e12,
+			Slot:        slot,
+			TimestampMs: timestampMs,
+		})
+		offset += 56
+	}
+
+	return entries, nil
+}
+
+// DecodePriceUpdate decodes a single price update (56 bytes, no count prefix).
+// Wire format: [mint:32B][usd_price:u64 LE][slot:u64 LE][timestamp_ms:u64 LE]
+func DecodePriceUpdate(data []byte) (*PriceEntry, error) {
+	if len(data) < 56 {
+		return nil, fmt.Errorf("payload too short for price update: %d < 56", len(data))
+	}
+
+	mint := base58.Encode(data[0:32])
+	usdPriceRaw := binary.LittleEndian.Uint64(data[32:])
+	slot := binary.LittleEndian.Uint64(data[40:])
+	timestampMs := binary.LittleEndian.Uint64(data[48:])
+
+	return &PriceEntry{
+		Mint:        mint,
+		UsdPrice:    float64(usdPriceRaw) / 1e12,
+		Slot:        slot,
+		TimestampMs: timestampMs,
+	}, nil
+}
+
 // DecodeQuote decodes a quote message (JSON format).
 func DecodeQuote(data []byte) (*Quote, error) {
 	var quote Quote

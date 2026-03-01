@@ -34,6 +34,18 @@ public final class MessageType {
     public static final int HEARTBEAT = 0x0D;
     /** Server → Client: Batched pool updates for high throughput */
     public static final int POOL_UPDATE_BATCH = 0x0E;
+    /** Server → Client: Block-level statistics */
+    public static final int BLOCK_STATS = 0x0F;
+    /** Client → Server: Subscribe to price updates (JSON) */
+    public static final int SUBSCRIBE_PRICE = 0x10;
+    /** Server → Client: Single price update (56B bincode) */
+    public static final int PRICE_UPDATE = 0x11;
+    /** Server → Client: Batched price updates */
+    public static final int PRICE_BATCH = 0x12;
+    /** Server → Client: Initial price snapshot */
+    public static final int PRICE_SNAPSHOT = 0x13;
+    /** Client → Server: Unsubscribe from prices */
+    public static final int UNSUBSCRIBE_PRICE = 0x14;
     /** Server → Client: Error message (UTF-8 string) */
     public static final int ERROR = 0xFF;
 

@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
 
-use crate::types::{Blockhash, FeeMarket, Heartbeat, PoolUpdate, Quote};
+use crate::types::{Blockhash, FeeMarket, Heartbeat, PoolUpdate, PriceEntry, Quote};
 use crate::ws::decoder::decode_message;
 
 /// Configuration for K256 WebSocket client.
@@ -97,6 +97,12 @@ pub enum DecodedMessage {
     Quote(Quote),
     /// Heartbeat
     Heartbeat(Heartbeat),
+    /// Single price update
+    PriceUpdate(PriceEntry),
+    /// Batch of price updates
+    PriceBatch(Vec<PriceEntry>),
+    /// Full price snapshot
+    PriceSnapshot(Vec<PriceEntry>),
     /// Error message
     Error(String),
     /// Subscription confirmed
@@ -114,6 +120,9 @@ pub struct K256WebSocketClient {
     on_blockhash: Callback<Blockhash>,
     on_quote: Callback<Quote>,
     on_heartbeat: Callback<Heartbeat>,
+    on_price_update: Callback<PriceEntry>,
+    on_price_batch: Callback<Vec<PriceEntry>>,
+    on_price_snapshot: Callback<Vec<PriceEntry>>,
     on_error: Callback<String>,
 }
 
@@ -129,6 +138,9 @@ impl K256WebSocketClient {
             on_blockhash: Arc::new(RwLock::new(None)),
             on_quote: Arc::new(RwLock::new(None)),
             on_heartbeat: Arc::new(RwLock::new(None)),
+            on_price_update: Arc::new(RwLock::new(None)),
+            on_price_batch: Arc::new(RwLock::new(None)),
+            on_price_snapshot: Arc::new(RwLock::new(None)),
             on_error: Arc::new(RwLock::new(None)),
         }
     }
@@ -188,6 +200,39 @@ impl K256WebSocketClient {
         });
     }
 
+    /// Register a callback for price updates.
+    pub fn on_price_update<F>(&self, callback: F)
+    where
+        F: Fn(PriceEntry) + Send + Sync + 'static,
+    {
+        let rt = tokio::runtime::Handle::current();
+        rt.block_on(async {
+            *self.on_price_update.write().await = Some(Box::new(callback));
+        });
+    }
+
+    /// Register a callback for price batch updates.
+    pub fn on_price_batch<F>(&self, callback: F)
+    where
+        F: Fn(Vec<PriceEntry>) + Send + Sync + 'static,
+    {
+        let rt = tokio::runtime::Handle::current();
+        rt.block_on(async {
+            *self.on_price_batch.write().await = Some(Box::new(callback));
+        });
+    }
+
+    /// Register a callback for price snapshots.
+    pub fn on_price_snapshot<F>(&self, callback: F)
+    where
+        F: Fn(Vec<PriceEntry>) + Send + Sync + 'static,
+    {
+        let rt = tokio::runtime::Handle::current();
+        rt.block_on(async {
+            *self.on_price_snapshot.write().await = Some(Box::new(callback));
+        });
+    }
+
     /// Register a callback for errors.
     pub fn on_error<F>(&self, callback: F)
     where
@@ -213,6 +258,9 @@ impl K256WebSocketClient {
         let on_blockhash = self.on_blockhash.clone();
         let on_quote = self.on_quote.clone();
         let on_heartbeat = self.on_heartbeat.clone();
+        let on_price_update = self.on_price_update.clone();
+        let on_price_batch = self.on_price_batch.clone();
+        let on_price_snapshot = self.on_price_snapshot.clone();
         let on_error = self.on_error.clone();
 
         // Message receiving task
@@ -260,6 +308,31 @@ impl K256WebSocketClient {
                                     DecodedMessage::Heartbeat(hb) => {
                                         if let Some(cb) = on_heartbeat.read().await.as_ref() {
                                             cb(hb);
+                                        }
+                                    }
+                                    DecodedMessage::PriceUpdate(entry) => {
+                                        if let Some(cb) = on_price_update.read().await.as_ref() {
+                                            cb(entry);
+                                        }
+                                    }
+                                    DecodedMessage::PriceBatch(entries) => {
+                                        if let Some(cb) = on_price_batch.read().await.as_ref() {
+                                            cb(entries.clone());
+                                        }
+                                        if let Some(cb) = on_price_update.read().await.as_ref() {
+                                            for entry in entries {
+                                                cb(entry);
+                                            }
+                                        }
+                                    }
+                                    DecodedMessage::PriceSnapshot(entries) => {
+                                        if let Some(cb) = on_price_snapshot.read().await.as_ref() {
+                                            cb(entries.clone());
+                                        }
+                                        if let Some(cb) = on_price_update.read().await.as_ref() {
+                                            for entry in entries {
+                                                cb(entry);
+                                            }
                                         }
                                     }
                                     DecodedMessage::Error(err) => {

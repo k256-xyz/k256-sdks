@@ -10,6 +10,7 @@ import xyz.k256.sdk.types.*;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -43,6 +44,9 @@ public class K256WebSocketClient extends WebSocketClient {
     private Consumer<Blockhash> onBlockhash;
     private Consumer<Quote> onQuote;
     private Consumer<Heartbeat> onHeartbeat;
+    private Consumer<PriceEntry> onPriceUpdate;
+    private Consumer<List<PriceEntry>> onPriceBatch;
+    private Consumer<List<PriceEntry>> onPriceSnapshot;
     private Consumer<String> onError;
     private Runnable onConnected;
     private Runnable onDisconnected;
@@ -50,6 +54,7 @@ public class K256WebSocketClient extends WebSocketClient {
     private volatile boolean running;
     private long reconnectDelay;
     private SubscribeRequest lastSubscription;
+    private SubscribePriceRequest lastPriceSubscription;
 
     private K256WebSocketClient(URI serverUri, String apiKey, boolean reconnect,
                                  long reconnectDelayInitialMs, long reconnectDelayMaxMs) {
@@ -70,6 +75,9 @@ public class K256WebSocketClient extends WebSocketClient {
         }
         if (lastSubscription != null) {
             sendSubscription(lastSubscription);
+        }
+        if (lastPriceSubscription != null) {
+            sendPriceSubscription(lastPriceSubscription);
         }
     }
 
@@ -139,6 +147,34 @@ public class K256WebSocketClient extends WebSocketClient {
                 if (onQuote != null) {
                     Quote quote = MessageDecoder.decodeQuote(payload);
                     if (quote != null) onQuote.accept(quote);
+                }
+            }
+            case MessageType.PRICE_UPDATE -> {
+                if (onPriceUpdate != null) {
+                    PriceEntry entry = MessageDecoder.decodePriceUpdate(payload);
+                    if (entry != null) onPriceUpdate.accept(entry);
+                }
+            }
+            case MessageType.PRICE_BATCH -> {
+                List<PriceEntry> entries = MessageDecoder.decodePriceEntries(payload);
+                if (onPriceBatch != null) {
+                    onPriceBatch.accept(entries);
+                }
+                if (onPriceUpdate != null) {
+                    for (PriceEntry entry : entries) {
+                        onPriceUpdate.accept(entry);
+                    }
+                }
+            }
+            case MessageType.PRICE_SNAPSHOT -> {
+                List<PriceEntry> snapshot = MessageDecoder.decodePriceEntries(payload);
+                if (onPriceSnapshot != null) {
+                    onPriceSnapshot.accept(snapshot);
+                }
+                if (onPriceUpdate != null) {
+                    for (PriceEntry entry : snapshot) {
+                        onPriceUpdate.accept(entry);
+                    }
                 }
             }
             case MessageType.ERROR -> {
@@ -243,6 +279,44 @@ public class K256WebSocketClient extends WebSocketClient {
     }
 
     /**
+     * Subscribe to price updates for the given tokens.
+     *
+     * @param tokens List of Base58-encoded token mint addresses
+     * @param thresholdBps Minimum price change in basis points to trigger an update
+     */
+    public void subscribePrices(List<String> tokens, int thresholdBps) {
+        SubscribePriceRequest request = new SubscribePriceRequest(tokens, thresholdBps);
+        lastPriceSubscription = request;
+        if (isOpen()) {
+            sendPriceSubscription(request);
+        }
+    }
+
+    private void sendPriceSubscription(SubscribePriceRequest request) {
+        JsonObject json = new JsonObject();
+        json.addProperty("type", "subscribe_price");
+        json.add("tokens", gson.toJsonTree(request.tokens));
+        json.addProperty("threshold_bps", request.thresholdBps);
+        String jsonStr = gson.toJson(json);
+        byte[] jsonBytes = jsonStr.getBytes(StandardCharsets.UTF_8);
+        byte[] msg = new byte[1 + jsonBytes.length];
+        msg[0] = (byte) MessageType.SUBSCRIBE_PRICE;
+        System.arraycopy(jsonBytes, 0, msg, 1, jsonBytes.length);
+        send(msg);
+    }
+
+    /**
+     * Unsubscribe from price updates.
+     */
+    public void unsubscribePrices() {
+        lastPriceSubscription = null;
+        if (isOpen()) {
+            byte[] msg = new byte[]{(byte) MessageType.UNSUBSCRIBE_PRICE};
+            send(msg);
+        }
+    }
+
+    /**
      * Start the client and connect.
      */
     public void start() {
@@ -265,6 +339,11 @@ public class K256WebSocketClient extends WebSocketClient {
         List<List<String>> tokenPairs
     ) {}
 
+    private record SubscribePriceRequest(
+        List<String> tokens,
+        int thresholdBps
+    ) {}
+
     /**
      * Builder for K256WebSocketClient.
      */
@@ -280,6 +359,9 @@ public class K256WebSocketClient extends WebSocketClient {
         private Consumer<Blockhash> onBlockhash;
         private Consumer<Quote> onQuote;
         private Consumer<Heartbeat> onHeartbeat;
+        private Consumer<PriceEntry> onPriceUpdate;
+        private Consumer<List<PriceEntry>> onPriceBatch;
+        private Consumer<List<PriceEntry>> onPriceSnapshot;
         private Consumer<String> onError;
         private Runnable onConnected;
         private Runnable onDisconnected;
@@ -334,6 +416,21 @@ public class K256WebSocketClient extends WebSocketClient {
             return this;
         }
 
+        public Builder onPriceUpdate(Consumer<PriceEntry> callback) {
+            this.onPriceUpdate = callback;
+            return this;
+        }
+
+        public Builder onPriceBatch(Consumer<List<PriceEntry>> callback) {
+            this.onPriceBatch = callback;
+            return this;
+        }
+
+        public Builder onPriceSnapshot(Consumer<List<PriceEntry>> callback) {
+            this.onPriceSnapshot = callback;
+            return this;
+        }
+
         public Builder onError(Consumer<String> callback) {
             this.onError = callback;
             return this;
@@ -364,6 +461,9 @@ public class K256WebSocketClient extends WebSocketClient {
             client.onBlockhash = onBlockhash;
             client.onQuote = onQuote;
             client.onHeartbeat = onHeartbeat;
+            client.onPriceUpdate = onPriceUpdate;
+            client.onPriceBatch = onPriceBatch;
+            client.onPriceSnapshot = onPriceSnapshot;
             client.onError = onError;
             client.onConnected = onConnected;
             client.onDisconnected = onDisconnected;
