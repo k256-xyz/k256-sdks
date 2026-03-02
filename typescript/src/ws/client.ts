@@ -261,6 +261,16 @@ export class K256WebSocketClient {
   private pendingPriceSubscription: SubscribePriceOptions | null = null;
   private isIntentionallyClosed = false;
 
+  /**
+   * Browser-initiated close frames are restricted by the WebSocket API:
+   * allowed codes are 1000 or 3000-4999.
+   */
+  private normalizeClientCloseCode(code: number): number {
+    if (code === CloseCode.NORMAL) return code;
+    if (code >= 3000 && code <= 4999) return code;
+    return CloseCode.NORMAL;
+  }
+
   /** Current connection state */
   get state(): ConnectionState {
     return this._state;
@@ -320,7 +330,7 @@ export class K256WebSocketClient {
     
     if (this.ws) {
       try {
-        this.ws.close(code, reason);
+        this.ws.close(this.normalizeClientCloseCode(code), reason);
       } catch {
         // Ignore errors during close
       }
@@ -748,8 +758,8 @@ export class K256WebSocketClient {
       );
       this.handleError(error);
       
-      // Force reconnect
-      this.ws?.close(CloseCode.GOING_AWAY, 'Ping timeout');
+      // Force reconnect. Use a browser-valid custom close code.
+      this.ws?.close(4000, 'Ping timeout');
     }, this.config.pongTimeoutMs);
   }
 
